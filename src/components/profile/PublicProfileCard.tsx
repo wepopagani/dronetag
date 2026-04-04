@@ -12,13 +12,54 @@
  * via toPublicProfile() before this component ever receives the data.
  */
 
-import type { ReactNode } from 'react';
+import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import type { PolicyStatus, PublicProfile, VerificationStatus } from '@/lib/types';
 import { LANGUAGES } from '@/lib/types';
 import { classNames, describePolicyStatus, formatDate, formatDateTime } from '@/lib/utils';
 import type { PolicySummary } from '@/lib/utils';
 import { QRPreview } from '@/components/ui/QRPreview';
+
+// ─── Fullscreen PDF Viewer ──────────────────────────────────────────────────
+
+function FullscreenPdf({ url, onClose, label }: { url: string; onClose: () => void; label: string }) {
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose(); }
+    document.addEventListener('keydown', onKey);
+    return () => { document.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
+  }, [onClose]);
+
+  return (
+    <div className="fixed inset-0 z-[100] flex flex-col bg-gray-900/95 backdrop-blur-sm">
+      {/* Header */}
+      <div className="flex shrink-0 items-center justify-between border-b border-white/10 px-4 py-3">
+        <span className="text-sm font-medium text-white">{label}</span>
+        <div className="flex items-center gap-2">
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="rounded-md bg-white/10 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-white/20">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="mr-1.5 inline h-3.5 w-3.5">
+              <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
+              <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+            </svg>
+            Download
+          </a>
+          <button type="button" onClick={onClose}
+            className="rounded-md bg-white/10 p-1.5 text-white transition hover:bg-white/20" aria-label="Close">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {/* PDF iframe */}
+      <div className="flex-1 overflow-hidden">
+        <iframe title={label} src={url} className="h-full w-full border-0" />
+      </div>
+    </div>
+  );
+}
 
 export type PublicProfileCardProps = { profile: PublicProfile };
 
@@ -187,6 +228,8 @@ function InsuranceBanner({ status, message }: { status: PolicyStatus; message: s
 
 export function PublicProfileCard({ profile }: PublicProfileCardProps) {
   const { t } = useLanguage();
+  const [pdfOpen, setPdfOpen] = useState(false);
+  const closePdf = useCallback(() => setPdfOpen(false), []);
 
   // All data comes from the PublicProfile projection — no admin fields available
   const p = profile.person;
@@ -340,17 +383,31 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
             </div>
             {hasPdf ? (
               <div className="p-4">
-                <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-100">
-                  <iframe title={t('profile.viewPolicy')} src={ins.pdfUrl} className="h-[320px] w-full border-0" />
-                </div>
-                <a href={ins.pdfUrl} target="_blank" rel="noopener noreferrer"
+                {/* Clickable PDF thumbnail — opens fullscreen viewer */}
+                <button type="button" onClick={() => setPdfOpen(true)}
+                  className="group relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-100 transition hover:border-gray-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
+                  <iframe title={t('profile.viewPolicy')} src={ins.pdfUrl}
+                    className="pointer-events-none h-[200px] w-full border-0" tabIndex={-1} />
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/30">
+                    <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-800 opacity-0 shadow-lg transition group-hover:opacity-100">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9m11.25-5.25v4.5m0-4.5h-4.5m4.5 0L15 9m-11.25 11.25v-4.5m0 4.5h4.5m-4.5 0L9 15m11.25 5.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
+                      </svg>
+                      {t('profile.viewPolicy')}
+                    </span>
+                  </div>
+                </button>
+
+                <button type="button" onClick={() => setPdfOpen(true)}
                   className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-gray-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 active:bg-gray-950">
-                  <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4">
-                    <path d="M10.75 2.75a.75.75 0 00-1.5 0v8.614L6.295 8.235a.75.75 0 10-1.09 1.03l4.25 4.5a.75.75 0 001.09 0l4.25-4.5a.75.75 0 00-1.09-1.03l-2.955 3.129V2.75z" />
-                    <path d="M3.5 12.75a.75.75 0 00-1.5 0v2.5A2.75 2.75 0 004.75 18h10.5A2.75 2.75 0 0018 15.25v-2.5a.75.75 0 00-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5z" />
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9m11.25-5.25v4.5m0-4.5h-4.5m4.5 0L15 9m-11.25 11.25v-4.5m0 4.5h4.5m-4.5 0L9 15m11.25 5.25v-4.5m0 4.5h-4.5m4.5 0L15 15" />
                   </svg>
                   {t('profile.viewPolicy')}
-                </a>
+                </button>
+
+                {/* Fullscreen PDF overlay */}
+                {pdfOpen ? <FullscreenPdf url={ins.pdfUrl!} onClose={closePdf} label={t('profile.viewPolicy')} /> : null}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 px-6 py-8 text-center">
