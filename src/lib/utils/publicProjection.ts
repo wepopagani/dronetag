@@ -51,7 +51,7 @@ export function toPublicProfile(
 ): PublicProfile {
   const {
     exposePdfUrl = true,
-    maskPolicyNumber: doMask = true,
+    maskPolicyNumber: doMask = false,
   } = options;
 
   return {
