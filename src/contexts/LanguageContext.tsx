@@ -17,7 +17,7 @@ const LanguageContext = createContext<LanguageContextType>({
 });
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('en');
+  const [language, setLanguage] = useState<Language>('it');
 
   const t = useCallback(
     (key: string, params?: Record<string, string | number>) =>
