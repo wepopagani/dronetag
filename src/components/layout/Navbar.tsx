@@ -26,7 +26,7 @@ export function Navbar() {
           Demo Mode — running with sample data, no Firebase connected
         </div>
       ) : null}
-      <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
         <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <Link
@@ -34,7 +34,7 @@ export function Navbar() {
               className="flex items-center gap-2 text-sm font-bold text-gray-900 transition hover:text-gray-700"
               onClick={() => setMobileOpen(false)}
             >
-              <Image src="/logo.png" alt="DroneTag" width={120} height={120} className="h-7 w-auto" priority />
+              <Image src="/logo.png" alt="DroneTag" width={200} height={200} className="h-10 w-auto sm:h-11" priority />
             </Link>
             {user ? (
               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
@@ -64,7 +64,7 @@ export function Navbar() {
 
         <nav
           className={classNames(
-            'absolute top-14 right-0 left-0 flex-col gap-1 border-b border-gray-200 bg-white px-4 py-3 shadow-sm md:static md:flex md:max-w-none md:flex-row md:items-center md:gap-1 md:border-0 md:bg-transparent md:p-0 md:shadow-none',
+            'absolute top-16 right-0 left-0 flex-col gap-1 border-b border-gray-200 bg-white px-4 py-3 shadow-sm md:static md:flex md:max-w-none md:flex-row md:items-center md:gap-1 md:border-0 md:bg-transparent md:p-0 md:shadow-none',
             mobileOpen ? 'flex' : 'hidden md:flex'
           )}
         >

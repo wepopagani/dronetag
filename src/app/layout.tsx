@@ -28,7 +28,7 @@ export default function RootLayout({
         <AuthProvider>
           <LanguageProvider>
             <Navbar />
-            <main className="min-h-screen pt-14">{children}</main>
+            <main className="min-h-screen pt-16">{children}</main>
           </LanguageProvider>
         </AuthProvider>
       </body>
