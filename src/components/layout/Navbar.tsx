@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
@@ -33,10 +34,7 @@ export function Navbar() {
               className="flex items-center gap-2 text-sm font-bold text-gray-900 transition hover:text-gray-700"
               onClick={() => setMobileOpen(false)}
             >
-              <span className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-900 text-[10px] font-bold tracking-wider text-white">
-                DT
-              </span>
-              <span className="hidden sm:inline">DroneTag</span>
+              <Image src="/logo.png" alt="DroneTag" width={120} height={120} className="h-7 w-auto" priority />
             </Link>
             {user ? (
               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
