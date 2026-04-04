@@ -34,7 +34,7 @@ export function Navbar() {
               className="flex items-center gap-2 text-sm font-bold text-gray-900 transition hover:text-gray-700"
               onClick={() => setMobileOpen(false)}
             >
-              <Image src="/logo.png" alt="DroneTag" width={200} height={200} className="h-10 w-auto sm:h-11" priority />
+              <Image src="/logo.png" alt="DroneTag" width={662} height={166} className="h-8 w-auto sm:h-9" priority />
             </Link>
             {user ? (
               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
