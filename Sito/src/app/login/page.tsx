@@ -1,8 +1,8 @@
 'use client';
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Suspense, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { loginWithEmail } from '@/lib/firebase/auth';
@@ -10,18 +10,35 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginInner />
+    </Suspense>
+  );
+}
+
+function LoginInner() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const params = useSearchParams();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const { t } = useLanguage();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const redirectParam = params.get('redirect');
+
+  function resolveDestination(isAdminUser: boolean): string {
+    if (redirectParam && redirectParam.startsWith('/')) return redirectParam;
+    return isAdminUser ? '/admin' : '/account';
+  }
+
   useEffect(() => {
     if (authLoading) return;
-    if (user) router.replace('/admin');
-  }, [user, authLoading, router]);
+    if (user) router.replace(resolveDestination(isAdmin));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, authLoading, isAdmin, router, redirectParam]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -29,7 +46,7 @@ export default function LoginPage() {
     setSubmitting(true);
     try {
       await loginWithEmail(email.trim(), password);
-      router.replace('/admin');
+      // Let the effect above route based on isAdmin once AuthContext updates.
     } catch {
       setError(t('login.error'));
     } finally {
@@ -101,8 +118,13 @@ export default function LoginPage() {
 
         {/* Footer */}
         <div className="mt-5 space-y-2 text-center">
-          <p className="text-xs text-gray-400">{t('login.restrictedNotice')}</p>
-          <Link href="/" className="inline-block text-xs font-medium text-gray-500 transition hover:text-gray-700">
+          <p className="text-xs text-gray-500">
+            {t('login.noAccount')}{' '}
+            <Link href="/signup" className="font-semibold text-gray-900 hover:underline">
+              {t('login.signupCta')}
+            </Link>
+          </p>
+          <Link href="/" className="inline-block text-xs font-medium text-gray-400 transition hover:text-gray-600">
             {t('nav.home')}
           </Link>
         </div>

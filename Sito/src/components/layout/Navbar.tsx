@@ -12,7 +12,7 @@ import { classNames } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
 export function Navbar() {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -36,7 +36,7 @@ export function Navbar() {
             >
               <Image src="/logo.png" alt="DroneTag" width={662} height={166} className="h-8 w-auto sm:h-9" priority />
             </Link>
-            {user ? (
+            {user && isAdmin ? (
               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">
                 {t('nav.adminBadge')}
               </span>
@@ -68,28 +68,38 @@ export function Navbar() {
             mobileOpen ? 'flex' : 'hidden md:flex'
           )}
         >
+          <Link href="/shop" className={navLinkClass} onClick={() => setMobileOpen(false)}>
+            {t('nav.shop')}
+          </Link>
+
+          <div className="flex items-center gap-2 px-3 py-2 md:py-0">
+            <label htmlFor="nav-language" className="sr-only">
+              {t('common.language')}
+            </label>
+            <select
+              id="nav-language"
+              value={language}
+              onChange={(e) => setLanguage(e.target.value as Language)}
+              className="max-w-[9rem] rounded-md border border-gray-200 bg-white py-1.5 pr-8 pl-2 text-xs text-gray-600 outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400/20"
+            >
+              {LANGUAGES.map((lang) => (
+                <option key={lang.value} value={lang.value}>
+                  {lang.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
           {user ? (
             <>
-              <Link href="/admin" className={navLinkClass} onClick={() => setMobileOpen(false)}>
-                {t('nav.dashboard')}
+              {isAdmin ? (
+                <Link href="/admin" className={navLinkClass} onClick={() => setMobileOpen(false)}>
+                  {t('nav.dashboard')}
+                </Link>
+              ) : null}
+              <Link href="/account" className={navLinkClass} onClick={() => setMobileOpen(false)}>
+                {t('nav.account')}
               </Link>
-              <div className="flex items-center gap-2 px-3 py-2 md:py-0">
-                <label htmlFor="nav-language" className="sr-only">
-                  {t('common.language')}
-                </label>
-                <select
-                  id="nav-language"
-                  value={language}
-                  onChange={(e) => setLanguage(e.target.value as Language)}
-                  className="max-w-[9rem] rounded-md border border-gray-200 bg-white py-1.5 pr-8 pl-2 text-xs text-gray-600 outline-none focus:border-gray-400 focus:ring-1 focus:ring-gray-400/20"
-                >
-                  {LANGUAGES.map((lang) => (
-                    <option key={lang.value} value={lang.value}>
-                      {lang.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
               <div className="px-3 md:px-0">
                 <Button
                   type="button"
@@ -106,9 +116,18 @@ export function Navbar() {
               </div>
             </>
           ) : (
-            <Link href="/login" className={navLinkClass} onClick={() => setMobileOpen(false)}>
-              {t('nav.login')}
-            </Link>
+            <>
+              <Link href="/login" className={navLinkClass} onClick={() => setMobileOpen(false)}>
+                {t('nav.login')}
+              </Link>
+              <Link
+                href="/signup"
+                className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                onClick={() => setMobileOpen(false)}
+              >
+                {t('nav.signup')}
+              </Link>
+            </>
           )}
         </nav>
       </div>

@@ -1,7 +1,9 @@
 import {
+  createUserWithEmailAndPassword,
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  updateProfile,
   type Unsubscribe,
   type User,
   type UserCredential,
@@ -27,6 +29,30 @@ export function loginWithEmail(
     return Promise.resolve({ user: DEMO_USER } as UserCredential);
   }
   return signInWithEmailAndPassword(getFirebaseAuth(), email, password);
+}
+
+export async function signupWithEmail(
+  email: string,
+  password: string,
+  displayName?: string,
+): Promise<UserCredential> {
+  if (DEMO_MODE) {
+    // Demo mode: pretend the signup succeeded and return the demo user.
+    return { user: DEMO_USER } as UserCredential;
+  }
+  const credential = await createUserWithEmailAndPassword(
+    getFirebaseAuth(),
+    email,
+    password,
+  );
+  if (displayName && credential.user) {
+    try {
+      await updateProfile(credential.user, { displayName });
+    } catch {
+      // Non-fatal: displayName is cosmetic.
+    }
+  }
+  return credential;
 }
 
 export function logout(): Promise<void> {
