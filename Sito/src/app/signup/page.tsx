@@ -12,7 +12,7 @@ import { Input } from '@/components/ui/Input';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading, isAdmin } = useAuth();
   const { t } = useLanguage();
 
   const [firstName, setFirstName] = useState('');
@@ -25,8 +25,8 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (authLoading) return;
-    if (user) router.replace('/account');
-  }, [user, authLoading, router]);
+    if (user) router.replace(isAdmin ? '/admin' : '/account');
+  }, [user, authLoading, isAdmin, router]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -52,7 +52,7 @@ export default function SignupPage() {
           lastName: lastName.trim(),
         });
       }
-      router.replace('/account');
+      // Routing: useEffect picks /admin vs /account once AuthContext has isAdmin.
     } catch (err) {
       const message =
         err instanceof Error && err.message.includes('email-already-in-use')

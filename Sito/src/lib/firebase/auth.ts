@@ -60,6 +60,23 @@ export function logout(): Promise<void> {
   return signOut(getFirebaseAuth());
 }
 
+/**
+ * Wait until Auth has restored the session, then ensure an ID token exists when signed in.
+ * Firestore calls before this often hit permission-denied (rules see no request.auth).
+ */
+export async function awaitFirebaseAuthReady(): Promise<void> {
+  if (DEMO_MODE) return;
+  const auth = getFirebaseAuth();
+  await new Promise<void>((resolve) => {
+    const unsub = onAuthStateChanged(auth, () => {
+      unsub();
+      resolve();
+    });
+  });
+  const u = auth.currentUser;
+  if (u) await u.getIdToken();
+}
+
 export function onAuthChange(
   callback: (user: User | null) => void,
 ): Unsubscribe {

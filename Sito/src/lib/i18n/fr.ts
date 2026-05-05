@@ -377,6 +377,7 @@ export const translations: TranslationMap = {
   'dashboard.title': 'Profils op\u00e9rateurs',
   'dashboard.subtitle': 'G\u00e9rez les titres, les polices et la v\u00e9rification depuis une interface unique.',
   'dashboard.createNew': 'Enregistrer un op\u00e9rateur',
+  'dashboard.viewPublicProfile': 'Voir le profil public',
   'dashboard.noProfiles': 'Aucun profil op\u00e9rateur enregistr\u00e9',
   'dashboard.noProfilesHint': 'Enregistrez d\u2019abord un profil op\u00e9rateur pour saisir les titres, les publier et en assurer la v\u00e9rification.',
   'dashboard.deleteModalTitle': 'Supprimer d\u00e9finitivement le profil op\u00e9rateur\u00a0?',

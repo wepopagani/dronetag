@@ -377,6 +377,7 @@ export const translations: TranslationMap = {
   'dashboard.title': 'Betreiberprofile',
   'dashboard.subtitle': 'Nachweise, Policen und Verifizierung zentral verwalten.',
   'dashboard.createNew': 'Betreiber registrieren',
+  'dashboard.viewPublicProfile': '\u00d6ffentliches Profil',
   'dashboard.noProfiles': 'Keine Betreiberprofile registriert',
   'dashboard.noProfilesHint': 'Legen Sie zun\u00e4chst ein Betreiberprofil an, um Nachweise zu erfassen, zu ver\u00f6ffentlichen und zu verifizieren.',
   'dashboard.deleteModalTitle': 'Betreiberprofil dauerhaft l\u00f6schen?',

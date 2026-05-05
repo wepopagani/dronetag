@@ -10,8 +10,9 @@
  * internal IDs, or any other admin-only field.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PublicProfileCard } from '@/components/profile/PublicProfileCard';
 import { getProfileBySlug } from '@/lib/firebase/firestore';
@@ -64,23 +65,27 @@ export default function PublicProfilePage() {
   const slug = typeof rawSlug === 'string' ? rawSlug : Array.isArray(rawSlug) ? rawSlug[0] : '';
 
   const { t, language, setLanguage } = useLanguage();
+  const { loading: authLoading, user } = useAuth();
 
   type FetchResult = { slug: string; data: Profile | null | 'error' };
   const [result, setResult] = useState<FetchResult | null>(null);
-  const fetchedSlugRef = useRef('');
 
   useEffect(() => {
-    if (!slug) return;
+    if (!slug || authLoading) return;
     let cancelled = false;
-    fetchedSlugRef.current = slug;
     void getProfileBySlug(slug)
       .then((p) => { if (!cancelled) setResult({ slug, data: p }); })
-      .catch(() => { if (!cancelled) setResult({ slug, data: 'error' }); });
+      .catch((err: unknown) => {
+        const code = typeof err === 'object' && err !== null && 'code' in err ? String((err as { code: unknown }).code) : '';
+        const message = typeof err === 'object' && err !== null && 'message' in err ? String((err as { message: unknown }).message) : String(err);
+        console.error('[DroneTag] Caricamento profilo pubblico fallito', { slug, code, message, err });
+        if (!cancelled) setResult({ slug, data: 'error' });
+      });
     return () => { cancelled = true; };
-  }, [slug]);
+  }, [slug, authLoading, user]);
 
   const isFresh = result !== null && result.slug === slug;
-  const isLoading = !slug || !isFresh;
+  const isLoading = !slug || authLoading || !isFresh;
   const isError = isFresh && result.data === 'error';
   const isNotFound = isFresh && result.data === null;
 

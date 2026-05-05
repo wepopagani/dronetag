@@ -1,4 +1,5 @@
 import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
+import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseStorage } from '@/lib/firebase/config';
 
 const MAX_IMAGE_SIZE = 5 * 1024 * 1024;   // 5 MB
@@ -42,6 +43,7 @@ async function demoUpload(file: File): Promise<string> {
 
 async function uploadFile(file: File, path: string): Promise<string> {
   if (DEMO_MODE) return demoUpload(file);
+  await awaitFirebaseAuthReady();
   const storage = getFirebaseStorage();
   const storageRef = ref(storage, path);
   await uploadBytes(storageRef, file);
@@ -50,6 +52,7 @@ async function uploadFile(file: File, path: string): Promise<string> {
 
 export async function deleteFile(path: string): Promise<void> {
   if (DEMO_MODE) return;
+  await awaitFirebaseAuthReady();
   const storage = getFirebaseStorage();
   try {
     await deleteObject(ref(storage, path));

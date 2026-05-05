@@ -386,6 +386,7 @@ export const translations = {
   'dashboard.title': 'Operator Profiles',
   'dashboard.subtitle': 'Manage credentials, insurance policies, and verification status for all registered operators.',
   'dashboard.createNew': 'Register operator',
+  'dashboard.viewPublicProfile': 'View public profile',
   'dashboard.noProfiles': 'No operator profiles registered',
   'dashboard.noProfilesHint': 'Register your first operator to begin managing credentials, insurance tracking, and public verification.',
   'dashboard.deleteModalTitle': 'Permanently delete operator profile?',

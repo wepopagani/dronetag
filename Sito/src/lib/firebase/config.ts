@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp, type FirebaseApp } from 'firebase/app';
 import { getAuth, type Auth } from 'firebase/auth';
-import { getFirestore, type Firestore } from 'firebase/firestore';
+import { getFirestore, initializeFirestore, type Firestore } from 'firebase/firestore';
 import { getStorage, type FirebaseStorage } from 'firebase/storage';
 
 /**
@@ -35,9 +35,14 @@ if (!DEMO_MODE) {
     messagingSenderId,
     appId,
   };
-  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  const isNewFirebaseApp = getApps().length === 0;
+  app = isNewFirebaseApp ? initializeApp(firebaseConfig) : getApp();
   auth = getAuth(app);
-  db = getFirestore(app);
+  // Safari/WebKit often blocks Firestore WebChannel ("Listen/channel" → access control checks).
+  // Long polling avoids that transport. Must run before any getFirestore on a new app.
+  db = isNewFirebaseApp
+    ? initializeFirestore(app, { experimentalAutoDetectLongPolling: true })
+    : getFirestore(app);
   storage = getStorage(app);
 }
 

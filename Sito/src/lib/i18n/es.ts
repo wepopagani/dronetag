@@ -377,6 +377,7 @@ export const translations: TranslationMap = {
   'dashboard.title': 'Perfiles de operador',
   'dashboard.subtitle': 'Gestione credenciales, p\u00f3lizas y verificaci\u00f3n desde un \u00fanico panel.',
   'dashboard.createNew': 'Registrar operador',
+  'dashboard.viewPublicProfile': 'Ver perfil p\u00fablico',
   'dashboard.noProfiles': 'No hay perfiles de operador registrados',
   'dashboard.noProfilesHint': 'Registre primero un perfil de operador para capturar credenciales, publicarlas y gestionar su verificaci\u00f3n.',
   'dashboard.deleteModalTitle': '\u00bfEliminar permanentemente el perfil de operador?',

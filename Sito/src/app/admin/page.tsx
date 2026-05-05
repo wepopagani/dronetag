@@ -304,7 +304,7 @@ export default function AdminDashboardPage() {
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('dashboard.expiryDate')}</th>
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('field.visibility')}</th>
                   <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('dashboard.updatedAt')}</th>
-                  <th className="w-[180px] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('common.actions')}</th>
+                  <th className="min-w-[260px] px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">{t('common.actions')}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
@@ -335,9 +335,19 @@ export default function AdminDashboardPage() {
                       <td className="px-4 py-3.5"><VisibilityBadge visibility={p.visibility} /></td>
                       <td className="px-4 py-3.5 text-xs text-gray-500">{formatDate(p.updatedAt)}</td>
                       <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex flex-wrap items-center gap-1.5">
                           <Link href={`/admin/profiles/${p.id}`}
                             className="rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200">{t('common.edit')}</Link>
+                          {p.slug?.trim() ? (
+                            <Link
+                              href={`/u/${encodeURIComponent(p.slug.trim())}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                            >
+                              {t('dashboard.viewPublicProfile')}
+                            </Link>
+                          ) : null}
                           <button type="button"
                             className="rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200 disabled:opacity-50"
                             disabled={toggleId !== null} onClick={() => void toggleVisibility(p)}
@@ -407,8 +417,18 @@ export default function AdminDashboardPage() {
                       </div>
 
                       {/* Actions */}
-                      <div className="flex gap-2 border-t border-gray-100 pt-3">
-                        <Button href={`/admin/profiles/${p.id}`} variant="primary" size="sm" className="flex-1">{t('common.edit')}</Button>
+                      <div className="flex flex-col gap-2 border-t border-gray-100 pt-3 sm:flex-row sm:flex-wrap">
+                        <Button href={`/admin/profiles/${p.id}`} variant="primary" size="sm" className="min-w-[8rem] flex-1">{t('common.edit')}</Button>
+                        {p.slug?.trim() ? (
+                          <Link
+                            href={`/u/${encodeURIComponent(p.slug.trim())}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex min-w-[8rem] flex-1 items-center justify-center rounded-lg border border-sky-200 bg-sky-50 px-3 py-1.5 text-sm font-medium text-sky-800 transition hover:bg-sky-100"
+                          >
+                            {t('dashboard.viewPublicProfile')}
+                          </Link>
+                        ) : null}
                         <Button type="button" variant="secondary" size="sm" loading={toggleId === p.id} disabled={toggleId !== null}
                           onClick={() => void toggleVisibility(p)}>
                           {p.visibility === 'public' ? t('toggle.makePrivate') : t('toggle.makePublic')}

@@ -377,6 +377,7 @@ export const translations: TranslationMap = {
   'dashboard.title': 'Profili operatore',
   'dashboard.subtitle': 'Gestisci credenziali, polizze assicurative e stato di verifica per tutti gli operatori registrati.',
   'dashboard.createNew': 'Registra operatore',
+  'dashboard.viewPublicProfile': 'Vedi profilo pubblico',
   'dashboard.noProfiles': 'Nessun profilo operatore registrato',
   'dashboard.noProfilesHint': 'Registra il primo operatore per iniziare a gestire credenziali, monitoraggio assicurativo e verifica pubblica.',
   'dashboard.deleteModalTitle': 'Eliminare definitivamente il profilo operatore?',

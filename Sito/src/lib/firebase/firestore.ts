@@ -3,7 +3,8 @@ import {
   limit, orderBy, query, updateDoc, where,
 } from 'firebase/firestore';
 
-import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
+import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
+import { DEMO_MODE, getFirebaseAuth, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/store';
 import type { Profile, ProfileFormData, PolicyStatus, VerificationStatus, Visibility } from '@/lib/types';
 import { computePolicyStatus, compareByPolicyPriority, getDisplayName } from '@/lib/utils';
@@ -58,6 +59,7 @@ function profileFromSnapshot(id: string, raw: Record<string, unknown>): Profile 
 
 export async function createProfile(data: ProfileFormData): Promise<string> {
   if (DEMO_MODE) return demoStore.createProfile(data);
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   const now = new Date().toISOString();
   const col = collection(db, PROFILES);
@@ -67,6 +69,7 @@ export async function createProfile(data: ProfileFormData): Promise<string> {
 
 export async function updateProfile(id: string, data: Partial<Profile>): Promise<void> {
   if (DEMO_MODE) return demoStore.updateProfile(id, data);
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   const docRef = doc(db, PROFILES, id);
   const payload = Object.fromEntries(
@@ -77,6 +80,7 @@ export async function updateProfile(id: string, data: Partial<Profile>): Promise
 
 export async function deleteProfile(id: string): Promise<void> {
   if (DEMO_MODE) return demoStore.deleteProfile(id);
+  await awaitFirebaseAuthReady();
   const { deleteProfileFiles } = await import('@/lib/firebase/storage');
   await deleteProfileFiles(id);
   const db = getFirebaseDb();
@@ -87,6 +91,7 @@ export async function deleteProfile(id: string): Promise<void> {
 
 export async function getProfile(id: string): Promise<Profile | null> {
   if (DEMO_MODE) return demoStore.getProfile(id);
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   const snap = await getDoc(doc(db, PROFILES, id));
   if (!snap.exists()) return null;
@@ -95,8 +100,22 @@ export async function getProfile(id: string): Promise<Profile | null> {
 
 export async function getProfileBySlug(slug: string): Promise<Profile | null> {
   if (DEMO_MODE) return demoStore.getProfileBySlug(slug);
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(collection(db, PROFILES), where('slug', '==', slug), limit(1));
+  const loggedIn = getFirebaseAuth().currentUser != null;
+  // Anonymous visitors: only published profiles (matches typical rules + avoids
+  // permission-denied on mixed visibility). Requires a Firestore composite index
+  // on (slug, visibility, status).
+  // Logged-in users: single-field slug query (default index) — rules allow full read.
+  const q = loggedIn
+    ? query(collection(db, PROFILES), where('slug', '==', slug), limit(1))
+    : query(
+        collection(db, PROFILES),
+        where('slug', '==', slug),
+        where('visibility', '==', 'public'),
+        where('status', '==', 'active'),
+        limit(1),
+      );
   const snap = await getDocs(q);
   const first = snap.docs[0];
   if (!first) return null;
@@ -105,6 +124,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
 
 export async function getAllProfiles(): Promise<Profile[]> {
   if (DEMO_MODE) return demoStore.getAllProfiles();
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   const q = query(collection(db, PROFILES), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);

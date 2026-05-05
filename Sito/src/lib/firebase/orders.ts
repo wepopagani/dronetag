@@ -8,6 +8,7 @@ import {
   where,
 } from 'firebase/firestore';
 
+import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/accountStore';
 import type {
@@ -63,6 +64,7 @@ function orderFromRaw(id: string, raw: Record<string, unknown>): Order {
 
 export async function getOrdersForUser(uid: string): Promise<Order[]> {
   if (DEMO_MODE) return demoStore.getOrdersByUser(uid);
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   const q = query(
     collection(db, ORDERS),
@@ -78,6 +80,7 @@ export async function getOrderForUser(
   uid: string,
 ): Promise<Order | null> {
   if (DEMO_MODE) return demoStore.getOrderById(id, uid);
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   const snap = await getDoc(doc(db, ORDERS, id));
   if (!snap.exists()) return null;

@@ -3,24 +3,19 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { User } from 'firebase/auth';
 import { onAuthChange } from '@/lib/firebase/auth';
+import { DEMO_MODE } from '@/lib/firebase/config';
+import { parseAdminEmailSet } from '@/lib/auth/adminAllowlist';
 
 /**
- * Comma-separated list of emails allowed to act as admins.
- * Set NEXT_PUBLIC_ADMIN_EMAILS in .env.local, e.g.:
- *   NEXT_PUBLIC_ADMIN_EMAILS=admin@example.com,ops@example.com
- *
- * When empty or unset, ALL authenticated users are treated as admins
- * (backward-compatible but not recommended for production).
+ * Admins = `SUPER_ADMIN_EMAILS` (see adminAllowlist.ts) ∪ NEXT_PUBLIC_ADMIN_EMAILS.
+ * Example: NEXT_PUBLIC_ADMIN_EMAILS=ops@example.com,analyst@example.com
  */
-const ADMIN_ALLOWLIST: Set<string> = (() => {
-  const raw = process.env.NEXT_PUBLIC_ADMIN_EMAILS ?? '';
-  const emails = raw.split(',').map((e) => e.trim().toLowerCase()).filter(Boolean);
-  return new Set(emails);
-})();
+const ADMIN_ALLOWLIST = parseAdminEmailSet(process.env.NEXT_PUBLIC_ADMIN_EMAILS);
 
 function isAllowedAdmin(user: User): boolean {
-  if (ADMIN_ALLOWLIST.size === 0) return true;
-  return ADMIN_ALLOWLIST.has((user.email ?? '').toLowerCase());
+  if (DEMO_MODE) return true;
+  const email = (user.email ?? '').toLowerCase();
+  return email !== '' && ADMIN_ALLOWLIST.has(email);
 }
 
 interface AuthContextType {

@@ -4,6 +4,7 @@ import {
   setDoc,
 } from 'firebase/firestore';
 
+import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/accountStore';
 import type { UserAccount } from '@/lib/types/account';
@@ -35,6 +36,7 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
 
 export async function getAccount(uid: string): Promise<UserAccount | null> {
   if (DEMO_MODE) return demoStore.getAccountByUid(uid);
+  await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
   const snap = await getDoc(doc(db, USERS, uid));
   if (!snap.exists()) return null;
