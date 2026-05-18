@@ -84,12 +84,85 @@ Drone Tag/
 
 ## Available scripts
 
-| Command        | Description                          |
-| -------------- | ------------------------------------ |
-| `npm run dev`  | Start Next.js in development mode    |
-| `npm run build`| Production build                     |
-| `npm run start`| Start production server (after build)  |
-| `npm run lint` | Run ESLint                           |
+| Command                              | Description                                                                                                  |
+| ------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `npm run dev`                        | Start Next.js in development mode                                                                            |
+| `npm run build`                      | Production build (refuses to build if Firebase env vars are missing — see V-036)                              |
+| `npm run start`                      | Start production server (after build)                                                                        |
+| `npm run lint`                       | Run ESLint                                                                                                   |
+| `npm run grant-admin -- <email>`     | PR-SEC-2: grant the `admin` custom claim to an existing Firebase Auth user. Append `--revoke` to take it away. |
+| `npm run backfill-public`            | PR-SEC-1: populate `dronesPublic/{slug}` snapshots for every public-active drone.                              |
+
+## Security setup (PR-SEC-1 / PR-SEC-2)
+
+This repo enforces several server-side controls that must be configured before deploying:
+
+1. **Service account** — copy a Firebase Admin service-account JSON into
+   `FIREBASE_SERVICE_ACCOUNT_KEY` in `.env.local` (single-line). The
+   proxy (`src/proxy.ts`) and `/api/session` use it to verify ID tokens
+   server-side; `npm run grant-admin` uses it to set custom claims.
+2. **App Check** — register a reCAPTCHA Enterprise (preferred) or
+   reCAPTCHA v3 site key in the Firebase Console and put it into
+   `NEXT_PUBLIC_RECAPTCHA_ENTERPRISE_SITE_KEY` (or
+   `NEXT_PUBLIC_RECAPTCHA_SITE_KEY`). Start enforcement in **monitor
+   mode** — flip `APP_CHECK_ENFORCE=true` once the App Check dashboard
+   shows clean traffic.
+3. **Cloud Functions** — deploy from the `functions/` workspace:
+   ```bash
+   cd functions && npm install && npm run build
+   firebase deploy --only functions
+   ```
+   The functions own the privileged create paths (V-004) and the
+   anonymous report submission (V-005/V-006).
+4. **Firestore rules + indexes + storage rules**:
+   ```bash
+   firebase deploy --only firestore:rules,firestore:indexes,storage:rules
+   ```
+5. **Backfill** the public collection after deploy:
+   ```bash
+   npm run backfill-public
+   ```
+6. **Promote admins** with `npm run grant-admin -- <email>`. The
+   client-side email allowlist has been removed; admin status comes
+   exclusively from the Firebase custom claim `admin == true`.
+
+### Content-Security-Policy: monitor → enforce (PR-SEC-3)
+
+The `next.config.ts` `headers()` block emits a CSP and the standard
+secure-headers set (HSTS, X-Frame-Options, X-Content-Type-Options,
+Referrer-Policy, Permissions-Policy). The CSP ships in **Report-Only**
+mode by default (`Content-Security-Policy-Report-Only` header) so
+violations are logged in the browser console but nothing is blocked.
+
+To enforce:
+
+1. Deploy and use the app for at least a few days under realistic
+   traffic. Watch the browser DevTools console + your error reporter
+   for `Refused to ...` messages.
+2. If you see violations from a legitimate origin (e.g. a CDN), add
+   it to `NEXT_PUBLIC_TRUSTED_PDF_HOSTS` (CSV) and redeploy.
+3. Once the console is clean, set `CSP_ENFORCE=true` in the build
+   environment and rebuild. The header name flips from
+   `Content-Security-Policy-Report-Only` to
+   `Content-Security-Policy` and violations now block.
+
+If a legitimate flow breaks after enforcing, set `CSP_ENFORCE=false`
+again, fix the directive (or add the missing host), and re-enforce.
+
+### URL host allowlist for user uploads (PR-SEC-3)
+
+Pasted PDF/image URLs in the dashboard forms (insurance policy,
+certificate, document) and on the Cloud Functions side are now
+restricted to:
+
+- `firebasestorage.googleapis.com`
+- `storage.googleapis.com`
+- Anything in `NEXT_PUBLIC_TRUSTED_PDF_HOSTS` (and `TRUSTED_PDF_HOSTS`
+  for the function-side mirror).
+
+Both lists must contain hostnames only (no scheme, no path). Keep them
+in sync — the client refuses to send a value that the server would
+reject anyway, but defence-in-depth requires both sides to agree.
 
 ### Seeding demo data
 

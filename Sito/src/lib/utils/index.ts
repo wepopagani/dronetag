@@ -1,6 +1,20 @@
 import type { Insurance, PolicyStatus, Profile } from '@/lib/types';
 
-export { toPublicProfile, maskPolicyNumber } from './publicProjection';
+export {
+  toPublicProfile,
+  toPublicDroneCard,
+  toPublicDroneCardFromList,
+  maskPolicyNumber,
+} from './publicProjection';
+export type { PublicDroneCard, PublicDroneCardOptions } from './publicProjection';
+export {
+  effectiveOperatorId,
+  isActiveOperatorOverride,
+  operatorDisplayName,
+  pilotDisplayName,
+  accountDisplayName,
+  generateDroneSlug,
+} from './entities';
 
 /**
  * Derives the full public URL for a profile from its slug.

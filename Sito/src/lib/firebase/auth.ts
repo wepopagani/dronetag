@@ -87,3 +87,13 @@ export function onAuthChange(
   }
   return onAuthStateChanged(getFirebaseAuth(), callback);
 }
+
+/** Synchronous accessor for the currently signed-in user (or null). */
+export function getCurrentUser(): User | null {
+  if (DEMO_MODE) return DEMO_USER;
+  try {
+    return getFirebaseAuth().currentUser;
+  } catch {
+    return null;
+  }
+}

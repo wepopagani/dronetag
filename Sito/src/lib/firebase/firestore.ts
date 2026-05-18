@@ -81,8 +81,17 @@ export async function updateProfile(id: string, data: Partial<Profile>): Promise
 export async function deleteProfile(id: string): Promise<void> {
   if (DEMO_MODE) return demoStore.deleteProfile(id);
   await awaitFirebaseAuthReady();
-  const { deleteProfileFiles } = await import('@/lib/firebase/storage');
-  await deleteProfileFiles(id);
+  const auth = getFirebaseAuth();
+  const uid = auth.currentUser?.uid ?? '';
+  if (uid) {
+    // Best-effort delete of storage assets owned by the caller. Storage
+    // rules (PR-SEC-1) only allow the writer to remove objects under
+    // their own `users/{uid}/...` namespace; legacy assets uploaded
+    // before user-scoped paths must be cleaned up via Cloud Storage
+    // tooling.
+    const { deleteProfileFiles } = await import('@/lib/firebase/storage');
+    await deleteProfileFiles(uid, id);
+  }
   const db = getFirebaseDb();
   await deleteDoc(doc(db, PROFILES, id));
 }

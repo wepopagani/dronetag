@@ -12,6 +12,11 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Compiled Cloud Functions output is a separate workspace and ships
+    // CommonJS — don't lint it from the Next.js project. The functions/
+    // workspace has its own lint script.
+    "functions/lib/**",
+    "functions/node_modules/**",
   ]),
 ]);
 

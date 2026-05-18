@@ -3,10 +3,46 @@
 :root {
   --background: #ffffff;
   --foreground: #111827;
+
+  /* Safe-area insets — fall back to 0 on browsers that don't expose env().
+     Used by fixed bars / floating widgets / modals so the iPhone notch and
+     home indicator never overlap interactive UI. */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+}
+
+html, body {
+  /* `100vh` on iOS Safari includes the URL bar in its calculation, which
+     causes layout jumps when scrolling. `100dvh` (dynamic viewport height)
+     is supported on iOS 15.4+ / Chrome 108+ and tracks the real visible
+     viewport. We keep `100vh` as a fallback. */
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: system-ui, -apple-system, sans-serif;
+  /* Disable text-size auto-adjust on iOS rotation. */
+  -webkit-text-size-adjust: 100%;
 }
+
+/* Utility helpers — kept tiny on purpose, used by Navbar, Modal, PWA UI. */
+.safe-pt   { padding-top: var(--safe-top); }
+.safe-pb   { padding-bottom: var(--safe-bottom); }
+.safe-px   { padding-left: var(--safe-left); padding-right: var(--safe-right); }
+.safe-bottom-4 { bottom: calc(1rem + var(--safe-bottom)); }
+.safe-bottom-6 { bottom: calc(1.5rem + var(--safe-bottom)); }
+
+/* Minimum 44×44 CSS px tap target — Apple HIG / WCAG 2.5.5 recommendation.
+   Applied to the public-facing Report button and any other outdoor / glove-
+   friendly CTA via `.tap-44`. */
+.tap-44 { min-height: 44px; min-width: 44px; }
+
+/* Avoid 100vh jumps when the iOS / Android on-screen keyboard appears. */
+.h-dvh   { height: 100dvh; }
+.min-h-dvh { min-height: 100dvh; }
+.max-h-dvh { max-height: 100dvh; }

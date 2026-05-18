@@ -32,7 +32,28 @@ export function PDFPreview({ url, label }: PDFPreviewProps) {
   return (
     <div className="space-y-3">
       <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
-        <iframe title={displayLabel} src={url} className="h-[400px] max-h-[400px] w-full border-0" />
+        {/*
+          V-018: PDF previews load user-controlled URLs. Without
+          `sandbox`, a malicious PDF host could navigate the parent
+          window or run scripts in this origin. We allow only:
+            • `allow-scripts`  — required by browsers' built-in PDF
+              viewers (PDF.js, Edge viewer) to render.
+            • `allow-popups`   — lets "Open in new tab" inside the
+              viewer work for users who want it.
+          We deliberately omit `allow-same-origin` (script runs in an
+          opaque origin → no cookies / parent access) and
+          `allow-top-navigation` (cannot redirect the parent).
+          `referrerPolicy="no-referrer"` (V-020 hardening) prevents
+          the storage host from learning which page embedded it.
+        */}
+        <iframe
+          title={displayLabel}
+          src={url}
+          className="h-[400px] max-h-[400px] w-full border-0"
+          sandbox="allow-scripts allow-popups"
+          referrerPolicy="no-referrer"
+          loading="lazy"
+        />
       </div>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">

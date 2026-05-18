@@ -1,6 +1,7 @@
 'use client';
 
 import { type ChangeEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { createProfile, updateProfile } from '@/lib/firebase/firestore';
 import {
@@ -204,9 +205,16 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
 
   // ─── Submit ─────────────────────────────────────────────────────────
 
+  // Storage paths are scoped to the writer's uid (V-012). We capture
+  // the admin's uid at submit time so storage.rules will allow the write.
+  const { user } = useAuth();
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault(); setSubmitError(null); setSaved(false);
     if (!validate()) return;
+    if (!user?.uid) {
+      setSubmitError(t('form.submitError'));
+      return;
+    }
     setSaving(true);
     try {
       let profileId = initialData?.id ?? '';
@@ -214,12 +222,13 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
 
       const assets: Assets = { ...formData.assets };
       const insurance: Insurance = { ...formData.insurance };
+      const uid = user.uid;
 
-      if (photoFile) assets.profilePhotoUrl = await uploadProfilePhoto(profileId, photoFile);
-      if (logoFile) assets.logoUrl = await uploadLogo(profileId, logoFile);
-      if (bannerFile) assets.bannerUrl = await uploadBanner(profileId, bannerFile);
-      if (pdfFile) insurance.pdfUrl = await uploadPolicyPdf(profileId, pdfFile);
-      if (qrFile) assets.qrCodeUrl = await uploadQrImage(profileId, qrFile);
+      if (photoFile) assets.profilePhotoUrl = await uploadProfilePhoto(uid, profileId, photoFile);
+      if (logoFile) assets.logoUrl = await uploadLogo(uid, profileId, logoFile);
+      if (bannerFile) assets.bannerUrl = await uploadBanner(uid, profileId, bannerFile);
+      if (pdfFile) insurance.pdfUrl = await uploadPolicyPdf(uid, profileId, pdfFile);
+      if (qrFile) assets.qrCodeUrl = await uploadQrImage(uid, profileId, qrFile);
 
       const hasUploads = Boolean(photoFile || logoFile || bannerFile || pdfFile || qrFile);
 
@@ -233,7 +242,7 @@ export function ProfileForm({ initialData, onSave }: ProfileFormProps) {
     } catch (err: unknown) {
       setSubmitError(err instanceof Error ? err.message : t('form.submitError'));
     } finally { setSaving(false); }
-  }, [formData, initialData?.id, isEdit, photoFile, logoFile, bannerFile, pdfFile, qrFile, onSave, t, validate]);
+  }, [formData, initialData?.id, isEdit, photoFile, logoFile, bannerFile, pdfFile, qrFile, onSave, t, validate, user?.uid]);
 
   // ─── Option lists ───────────────────────────────────────────────────
 

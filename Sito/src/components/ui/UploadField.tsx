@@ -113,10 +113,17 @@ export function UploadField({
 
       {showImagePreview ? (
         <div className="relative mb-3 overflow-hidden rounded-lg border border-gray-200 bg-gray-50">
+          {/*
+            V-020: user-controlled URL. `referrerPolicy="no-referrer"` so
+            we don't leak the in-app page URL to the image host (which
+            could be an attacker if URL allowlist is widened later).
+          */}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={currentUrl}
             alt=""
+            referrerPolicy="no-referrer"
+            loading="lazy"
             className="max-h-48 w-full object-contain"
           />
           {onRemove ? (

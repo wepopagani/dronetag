@@ -16,16 +16,44 @@ export const EMPTY_ADDRESS: Address = {
   country: '',
 };
 
+/** Whether this user is a private individual or a company. */
+export type AccountType = 'private' | 'company';
+
 export interface UserAccount {
   uid: string;
   email: string;
+  /**
+   * 'private' for individuals (uses firstName/lastName/dateOfBirth);
+   * 'company' for legal entities (uses companyName/companyVat/companyContactPerson).
+   * Defaults to 'private' for backward compatibility with pre-M1 accounts.
+   */
+  accountType: AccountType;
   firstName: string;
   lastName: string;
+  /** ISO date (YYYY-MM-DD). Only meaningful when accountType === 'private'. */
+  dateOfBirth: string;
   phone: string;
   address: Address;
+
+  // Company-specific fields. Empty strings for private accounts.
+  companyName: string;
+  companyContactPerson: string;
+  companyVat: string;
+  /** Optional country-specific company registry number (e.g. REA/CH-UID). */
+  companyUniqueNumber: string;
+
   createdAt: string;
   updatedAt: string;
 }
+
+export const EMPTY_USER_ACCOUNT_EXTRAS = {
+  accountType: 'private' as AccountType,
+  dateOfBirth: '',
+  companyName: '',
+  companyContactPerson: '',
+  companyVat: '',
+  companyUniqueNumber: '',
+};
 
 // ─── Orders (Firestore: `orders/{id}` with `userId` field) ─────────────────
 

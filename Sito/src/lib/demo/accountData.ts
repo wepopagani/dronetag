@@ -11,8 +11,10 @@ const ahead = (days: number): string =>
 export const DEMO_USER_ACCOUNT: UserAccount = {
   uid: 'demo-admin',
   email: 'michele@360drone.it',
+  accountType: 'private',
   firstName: 'Michele',
   lastName: 'Caffagni',
+  dateOfBirth: '1985-03-12',
   phone: '+39 340 123 4567',
   address: {
     line1: 'Salita della Resistenza 1',
@@ -21,6 +23,10 @@ export const DEMO_USER_ACCOUNT: UserAccount = {
     postalCode: '19013',
     country: 'Italy',
   },
+  companyName: '',
+  companyContactPerson: '',
+  companyVat: '',
+  companyUniqueNumber: '',
   createdAt: ago(120),
   updatedAt: ago(5),
 };

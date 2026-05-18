@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { loginWithEmail } from '@/lib/firebase/auth';
+import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -46,6 +47,7 @@ function LoginInner() {
     setSubmitting(true);
     try {
       await loginWithEmail(email.trim(), password);
+      trackEvent('login');
       // Let the effect above route based on isAdmin once AuthContext updates.
     } catch {
       setError(t('login.error'));

@@ -1,41 +1,89 @@
+/**
+ * One-off: upload a QR PNG to Firebase Storage and stamp the URL onto a
+ * legacy profile document.
+ *
+ * Reads Firebase config + an admin login from the environment (.env.local).
+ * Never commit credentials. Run with:
+ *
+ *   npx tsx --env-file=.env.local scripts/upload-qr.ts \
+ *     <slug> [<local-png-path>]
+ *
+ * Required env vars:
+ *   NEXT_PUBLIC_FIREBASE_*
+ *   SEED_AUTH_EMAIL / SEED_AUTH_PASSWORD  (a user with admin custom claim)
+ */
+
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, getDocs, query, where, updateDoc, doc } from 'firebase/firestore';
-import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { getAuth, signInWithEmailAndPassword } from 'firebase/auth';
+import {
+  collection,
+  doc,
+  getDocs,
+  getFirestore,
+  query,
+  updateDoc,
+  where,
+} from 'firebase/firestore';
+import { getDownloadURL, getStorage, ref, uploadBytes } from 'firebase/storage';
 import { readFileSync } from 'fs';
 
-const app = initializeApp({
-  apiKey: 'AIzaSyBiq0rq6m-vPzZGqRTiFtAlVYu43OtHLf4',
-  authDomain: 'dronetag-e905d.firebaseapp.com',
-  projectId: 'dronetag-e905d',
-  storageBucket: 'dronetag-e905d.firebasestorage.app',
-  messagingSenderId: '521750670087',
-  appId: '1:521750670087:web:74d2ca29c435495f1533a2',
-});
-
-const db = getFirestore(app);
-const storage = getStorage(app);
-
 async function main() {
-  // Upload QR image
-  const bytes = readFileSync('/tmp/qr-360drone.png');
-  const storageRef = ref(storage, 'profiles/michele-caffagni-001/assets/qr.png');
+  const slug = (process.argv[2] || '').trim();
+  const localPath = (process.argv[3] || '/tmp/qr.png').trim();
+  if (!slug) {
+    console.error('Usage: npx tsx --env-file=.env.local scripts/upload-qr.ts <slug> [<local-png>]');
+    process.exit(1);
+  }
+
+  const apiKey = process.env.NEXT_PUBLIC_FIREBASE_API_KEY ?? '';
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ?? '';
+  const seedEmail = process.env.SEED_AUTH_EMAIL ?? '';
+  const seedPassword = process.env.SEED_AUTH_PASSWORD ?? '';
+
+  if (!apiKey || !projectId) {
+    console.error('Missing NEXT_PUBLIC_FIREBASE_* env. Use --env-file=.env.local.');
+    process.exit(1);
+  }
+  if (!seedEmail || !seedPassword) {
+    console.error('Missing SEED_AUTH_EMAIL / SEED_AUTH_PASSWORD env (admin user).');
+    process.exit(1);
+  }
+
+  const app = initializeApp({
+    apiKey,
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN ?? '',
+    projectId,
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET ?? '',
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID ?? '',
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID ?? '',
+  });
+  const auth = getAuth(app);
+  const cred = await signInWithEmailAndPassword(auth, seedEmail, seedPassword);
+  const db = getFirestore(app);
+  const storage = getStorage(app);
+
+  const bytes = readFileSync(localPath);
+  const path = `users/${cred.user.uid}/profiles/${slug}/qr.png`;
+  const storageRef = ref(storage, path);
   await uploadBytes(storageRef, bytes, { contentType: 'image/png' });
   const qrUrl = await getDownloadURL(storageRef);
-  console.log('✓ QR image uploaded:', qrUrl);
+  console.log(`[upload-qr] uploaded → ${path}`);
 
-  // Find profile by slug
-  const q = query(collection(db, 'profiles'), where('slug', '==', 'michele-caffagni-360drone'));
-  const snap = await getDocs(q);
-  if (snap.empty) { console.error('Profile not found'); process.exit(1); }
-
-  const profileDoc = snap.docs[0];
+  const snap = await getDocs(query(collection(db, 'profiles'), where('slug', '==', slug)));
+  if (snap.empty) {
+    console.error(`[upload-qr] No profile with slug "${slug}".`);
+    process.exit(2);
+  }
+  const profileDoc = snap.docs[0]!;
   await updateDoc(doc(db, 'profiles', profileDoc.id), {
     'assets.qrCodeUrl': qrUrl,
     updatedAt: new Date().toISOString(),
   });
 
-  console.log('✅ Profile updated with QR image!');
-  process.exit(0);
+  console.log(`[upload-qr] profile ${profileDoc.id} updated with QR URL.`);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

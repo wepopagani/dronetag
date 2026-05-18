@@ -1,0 +1,311 @@
+rules_version = '2';
+
+// DroneTag — Firestore security rules (PR-SEC-1 + PR-SEC-2).
+//
+// PR-SEC-1 hardening summary (still in force):
+//   • V-001/V-002/V-015 — `drones/*` and `profiles/*` are not
+//     anonymously readable. Anonymous visitors see only the sanitised
+//     `dronesPublic/{slug}` snapshots written at publish time.
+//   • V-003 — owner update rules use diff().affectedKeys().hasOnly([...])
+//     to forbid owners from changing `verificationStatus`, `lastVerifiedAt`,
+//     `migration`, `userId`, etc. Verification is admin-only.
+//   • V-007 — `drones` updates clamp `activeOperatorUntil` to ≤ 24h
+//     and require `activeOperatorSetBy == request.auth.uid` whenever an
+//     override is active.
+//   • V-005 (partial) — `reports` create rule cross-checks supplied
+//     fields against the underlying drone via get().
+//   • V-009 — default catch-all is `allow read, write: if false`.
+//
+// PR-SEC-2 hardening (this revision):
+//   • V-004 — privileged creates on `drones`, `operators`,
+//     `certificates`, `documents`, `insurances` are now deny-from-client.
+//     The `createX` Cloud Functions (Node.js, firebase-admin) bypass
+//     rules and enforce slot quotas server-side.
+//   • V-005/V-006 — anonymous `reports` create is also deny-from-client.
+//     The `submitReport` Cloud Function looks up the drone server-side,
+//     derives the trustworthy ownerUserId, and applies an IP+slug
+//     rate limit. Clients cannot directly post reports anymore.
+//   • V-035 — App Check enforcement on the Cloud Functions side
+//     (function-level toggle via APP_CHECK_ENFORCE env var). Rules
+//     keep `request.app != null` as a TODO so Firestore-side
+//     enforcement can be flipped on once monitor traffic is clean.
+//
+// Open work tracked for follow-up PRs:
+//   TODO V-035 finalise: enable Firebase App Check Firestore-side
+//   enforcement after monitor mode is clean. Add `request.app != null`
+//   to public reads on `dronesPublic` + `plans` once verified.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ─────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+    function ownsDrone(droneId) {
+      return isSignedIn()
+          && exists(/databases/$(database)/documents/drones/$(droneId))
+          && get(/databases/$(database)/documents/drones/$(droneId)).data.userId == request.auth.uid;
+    }
+
+    // ─── Legacy `profiles` (admin-only; no anonymous reads) ─────────────
+    match /profiles/{profileId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ─── User account doc (`users/{uid}`) ────────────────────────────────
+    match /users/{uid} {
+      // Owner can read, and create/update their own doc but cannot grant
+      // themselves admin via field manipulation.
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid
+                       && !('migration' in request.resource.data);
+      allow update: if isSignedIn() && request.auth.uid == uid
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'accountType','firstName','lastName','dateOfBirth',
+                              'email','phone','address',
+                              'companyName','companyContactPerson','companyVat','companyUniqueNumber',
+                              'updatedAt'
+                            ]);
+      allow read, write: if isAdmin();
+    }
+
+    // ─── Pilot (`pilots/{uid}`, doc id = userId) ────────────────────────
+    match /pilots/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow create: if isSignedIn() && request.auth.uid == uid
+                       && request.resource.data.userId == uid;
+      allow update: if isSignedIn() && request.auth.uid == uid
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'firstName','lastName','dateOfBirth','nationality',
+                              'email','phone','address',
+                              'operatorCode','operatorLicense','emergencyContact',
+                              'updatedAt'
+                            ]);
+      allow read, write: if isAdmin();
+    }
+
+    // ─── Operators (`operators/{opId}` with userId field) ───────────────
+    // V-004: client-side create is denied — the `createOperator` Cloud
+    // Function owns this path and enforces the 3-operator quota.
+    match /operators/{opId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read: if isAdmin();
+      allow create: if false; // → see functions/src/create-operator.ts
+      allow update: if isSignedIn()
+                       && request.auth.uid == resource.data.userId
+                       && request.resource.data.userId == resource.data.userId
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'kind','label','isDefault',
+                              'private','company',
+                              'updatedAt'
+                            ]);
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Drones — owner+admin reads only (raw doc never anonymous) ──────
+    // V-001/V-015 closure: anonymous public viewers MUST use
+    // `dronesPublic/{slug}` instead.
+    // V-004 closure: client-side create denied — `createDrone` Cloud
+    // Function mints the slug, validates ownership of the linked
+    // operator + insurance, and checks the drone-slot quota.
+    match /drones/{droneId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read: if isAdmin();
+
+      allow create: if false; // → see functions/src/create-drone.ts
+
+      // V-003: owner can change only "their" fields. verificationStatus,
+      // lastVerifiedAt, migration, userId, slug and createdAt are
+      // intentionally excluded from the allow-list so an owner cannot
+      // self-verify or rename themselves into someone else's account.
+      // V-007: the active-operator quartet is allowed BUT clamped below.
+      allow update: if isSignedIn()
+                       && request.auth.uid == resource.data.userId
+                       && request.resource.data.userId == resource.data.userId
+                       && request.resource.data.slug == resource.data.slug
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'manufacturer','model','classMarking',
+                              'droneSerialNumber','controllerSerialNumber',
+                              'defaultOperatorId','insuranceId',
+                              'status','visibility',
+                              'activeOperatorId','activeOperatorUntil',
+                              'activeOperatorSetAt','activeOperatorSetBy','activeOperatorReason',
+                              'publishedAt','updatedAt'
+                            ])
+                       && (
+                         // No active override → audit fields must be cleared.
+                         request.resource.data.activeOperatorId == null
+                         ||
+                         // Active override → setBy must be the writer, and
+                         // until-timestamp must be in the future and
+                         // ≤ now+24h (with 2 minutes slack for client clock skew).
+                         (
+                           request.resource.data.activeOperatorSetBy == request.auth.uid
+                           && request.resource.data.activeOperatorUntil is timestamp
+                           && request.resource.data.activeOperatorUntil > request.time
+                           && request.resource.data.activeOperatorUntil
+                                <= request.time + duration.value(24 * 60 + 2, 'm')
+                         )
+                       );
+
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── DronesPublic (sanitised public projection, PR-SEC-1) ──────────
+    // The ONLY collection anonymous users can read. The doc id is the
+    // public slug. The owner authors the snapshot client-side via
+    // `syncDronePublicSnapshot()`; rules verify the writer owns the
+    // referenced drone and that the snapshot's slug matches the doc id.
+    match /dronesPublic/{slug} {
+      allow read: if true;
+
+      allow create: if isSignedIn()
+                       && request.resource.data.slug == slug
+                       && request.resource.data.droneId is string
+                       && exists(/databases/$(database)/documents/drones/$(request.resource.data.droneId))
+                       && get(/databases/$(database)/documents/drones/$(request.resource.data.droneId)).data.userId == request.auth.uid
+                       && get(/databases/$(database)/documents/drones/$(request.resource.data.droneId)).data.slug == slug;
+
+      allow update: if isSignedIn()
+                       && request.resource.data.droneId == resource.data.droneId
+                       && request.resource.data.slug == resource.data.slug
+                       && exists(/databases/$(database)/documents/drones/$(resource.data.droneId))
+                       && get(/databases/$(database)/documents/drones/$(resource.data.droneId)).data.userId == request.auth.uid;
+
+      allow delete: if isSignedIn()
+                       && exists(/databases/$(database)/documents/drones/$(resource.data.droneId))
+                       && get(/databases/$(database)/documents/drones/$(resource.data.droneId)).data.userId == request.auth.uid;
+
+      allow read, write: if isAdmin();
+    }
+
+    // ─── Insurances ─────────────────────────────────────────────────────
+    // V-004 closure: client-side create denied — `createInsurance` Cloud
+    // Function owns this path and validates the linked drone/operator.
+    match /insurances/{insId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read: if isAdmin();
+      allow create: if false; // → see functions/src/create-insurance.ts
+      allow update: if isSignedIn()
+                       && request.auth.uid == resource.data.userId
+                       && request.resource.data.userId == resource.data.userId
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'link','droneId','operatorId',
+                              'provider','policyNumber',
+                              'issueDate','expiryDate',
+                              'notes','pdfUrl',
+                              'updatedAt'
+                            ]);
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Certificates ───────────────────────────────────────────────────
+    // V-004 closure: client-side create denied — `createCertificate`
+    // Cloud Function owns this path and applies the cert-slot quota.
+    match /certificates/{certId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read: if isAdmin();
+      allow create: if false; // → see functions/src/create-certificate.ts
+      allow update: if isSignedIn()
+                       && request.auth.uid == resource.data.userId
+                       && request.resource.data.userId == resource.data.userId
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'kind','label','issuedBy',
+                              'issuedAt','expiresAt',
+                              'fileUrl','notes',
+                              'updatedAt'
+                            ]);
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Documents ──────────────────────────────────────────────────────
+    // V-004 closure: client-side create denied — `createDocument` Cloud
+    // Function owns this path and applies content-type + size + quota.
+    match /documents/{docId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read: if isAdmin();
+      allow create: if false; // → see functions/src/create-document.ts
+      allow update: if isSignedIn()
+                       && request.auth.uid == resource.data.userId
+                       && request.resource.data.userId == resource.data.userId
+                       && request.resource.data.diff(resource.data).affectedKeys()
+                            .hasOnly([
+                              'kind','label',
+                              'fileUrl','fileName','fileSize','mimeType',
+                              'notes',
+                              'updatedAt'
+                            ]);
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Slots — read by owner+admin, write by admin only ───────────────
+    // TODO V-004: full quota enforcement requires a Cloud Function that
+    // wraps create operations on drones/operators/certificates/documents
+    // and checks against this doc transactionally. Until then, slot caps
+    // are enforced client-side only.
+    match /slots/{uid} {
+      allow read: if isSignedIn() && request.auth.uid == uid;
+      allow read, write: if isAdmin();
+    }
+
+    // ─── Plans — public read, admin write ───────────────────────────────
+    match /plans/{planId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ─── Reports — function-only create, owner-or-admin read ───────────
+    // V-005/V-006 closure: anonymous client create is denied. The
+    // `submitReport` Cloud Function looks up the drone, derives the
+    // trustworthy ownerUserId, applies a per-IP+slug rate limit, and
+    // writes the audit-safe payload via firebase-admin (which bypasses
+    // these rules). Owners read their own inbox; mark-as-read is the
+    // only permitted owner update.
+    match /reports/{reportId} {
+      allow create: if false; // → see functions/src/submit-report.ts
+
+      allow read: if isSignedIn() && request.auth.uid == resource.data.ownerUserId;
+      allow read: if isAdmin();
+
+      // Owner can only flip `read` to true; everything else is locked.
+      allow update: if isSignedIn()
+                       && request.auth.uid == resource.data.ownerUserId
+                       && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow update, delete: if isAdmin();
+    }
+
+    // ─── Rate-limit buckets (used by Cloud Functions only) ─────────────
+    // The `submitReport` function writes here under the firebase-admin
+    // bypass; clients must never read or write this collection.
+    match /rateLimits/{key} {
+      allow read, write: if false;
+      allow read: if isAdmin();
+    }
+
+    // ─── Orders (legacy, unchanged) ──────────────────────────────────────
+    match /orders/{orderId} {
+      allow read: if isSignedIn() && request.auth.uid == resource.data.userId;
+      allow read, write: if isAdmin();
+    }
+
+    // ─── Default deny for unmatched paths (V-009) ────────────────────────
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

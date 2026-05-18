@@ -1,13 +1,18 @@
 import {
+  collection,
   doc,
   getDoc,
+  getDocs,
+  orderBy,
+  query,
   setDoc,
+  updateDoc,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/accountStore';
-import type { UserAccount } from '@/lib/types/account';
+import type { AccountType, UserAccount } from '@/lib/types/account';
 
 const USERS = 'users';
 
@@ -16,11 +21,16 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
   const addr = (raw['address'] ?? {}) as Record<string, unknown>;
   const addrStr = (k: string) => (typeof addr[k] === 'string' ? (addr[k] as string) : '');
 
+  const rawType = str('accountType');
+  const accountType: AccountType = rawType === 'company' ? 'company' : 'private';
+
   return {
     uid,
     email: str('email'),
+    accountType,
     firstName: str('firstName'),
     lastName: str('lastName'),
+    dateOfBirth: str('dateOfBirth'),
     phone: str('phone'),
     address: {
       line1: addrStr('line1'),
@@ -29,6 +39,10 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
       postalCode: addrStr('postalCode'),
       country: addrStr('country'),
     },
+    companyName: str('companyName'),
+    companyContactPerson: str('companyContactPerson'),
+    companyVat: str('companyVat'),
+    companyUniqueNumber: str('companyUniqueNumber'),
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
   };
@@ -61,8 +75,10 @@ export async function ensureAccount(
   const account: UserAccount = {
     uid,
     email,
+    accountType: seed.accountType ?? 'private',
     firstName: seed.firstName ?? '',
     lastName: seed.lastName ?? '',
+    dateOfBirth: seed.dateOfBirth ?? '',
     phone: seed.phone ?? '',
     address: seed.address ?? {
       line1: '',
@@ -71,6 +87,10 @@ export async function ensureAccount(
       postalCode: '',
       country: '',
     },
+    companyName: seed.companyName ?? '',
+    companyContactPerson: seed.companyContactPerson ?? '',
+    companyVat: seed.companyVat ?? '',
+    companyUniqueNumber: seed.companyUniqueNumber ?? '',
     createdAt: now,
     updatedAt: now,
   };
@@ -78,4 +98,28 @@ export async function ensureAccount(
   const db = getFirebaseDb();
   await setDoc(doc(db, USERS, uid), account);
   return account;
+}
+
+/** Patch an existing `users/{uid}` document. */
+export async function updateAccount(uid: string, patch: Partial<UserAccount>): Promise<void> {
+  if (DEMO_MODE) return demoStore.updateAccount(uid, patch);
+  await awaitFirebaseAuthReady();
+  const db = getFirebaseDb();
+  const payload = Object.fromEntries(
+    Object.entries(patch).filter(([k, v]) => k !== 'uid' && v !== undefined),
+  );
+  await updateDoc(doc(db, USERS, uid), { ...payload, updatedAt: new Date().toISOString() });
+}
+
+/**
+ * Admin-only: list every user account. The Firestore rules grant read on
+ * `users/*` to admin claims; ordinary users will get permission-denied.
+ */
+export async function listAllAccounts(): Promise<UserAccount[]> {
+  if (DEMO_MODE) return demoStore.listAllAccounts();
+  await awaitFirebaseAuthReady();
+  const db = getFirebaseDb();
+  const q = query(collection(db, USERS), orderBy('createdAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map((d) => accountFromRaw(d.id, d.data() as Record<string, unknown>));
 }

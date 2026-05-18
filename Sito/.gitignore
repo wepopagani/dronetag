@@ -1,0 +1,41 @@
+# Dependencies
+node_modules/
+
+# Build artefacts
+.next/
+out/
+dist/
+*.tsbuildinfo
+next-env.d.ts
+
+# Environment / secrets — NEVER commit
+.env
+.env.*
+!.env.example
+!.env.local.example
+.firebaserc.local
+
+# Firebase debug
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+.firebase/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+*.lcov
+
+# Misc
+.cache/

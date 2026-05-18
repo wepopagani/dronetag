@@ -90,6 +90,16 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* Legal disclaimer (PRD §9) */}
+      <section className="bg-white">
+        <div className="mx-auto max-w-4xl px-4 py-10 sm:px-6">
+          <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-4 text-xs leading-relaxed text-gray-600">
+            <p className="font-medium text-gray-700">{t('legal.notOfficial')}</p>
+            <p className="mt-1.5">{t('legal.platformDisclaimer')}</p>
+          </div>
+        </div>
+      </section>
+
       {/* Footer */}
       <footer className="bg-gray-50 py-6">
         <div className="mx-auto max-w-4xl px-4 sm:px-6">

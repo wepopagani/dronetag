@@ -53,9 +53,16 @@ function FullscreenPdf({ url, onClose, label }: { url: string; onClose: () => vo
           </button>
         </div>
       </div>
-      {/* PDF iframe */}
+      {/* PDF iframe — V-018 hardened sandbox (see PDFPreview for rationale). */}
       <div className="flex-1 overflow-hidden">
-        <iframe title={label} src={url} className="h-full w-full border-0" />
+        <iframe
+          title={label}
+          src={url}
+          className="h-full w-full border-0"
+          sandbox="allow-scripts allow-popups"
+          referrerPolicy="no-referrer"
+          loading="lazy"
+        />
       </div>
     </div>
   );
@@ -269,8 +276,16 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
       <div className="relative">
         <div className="relative h-36 w-full overflow-hidden sm:h-44">
           {val(assets.bannerUrl) ? (
+            // V-020: user-controlled URL — no-referrer to avoid leaking
+            // the public page that embeds this image to the image host.
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={assets.bannerUrl} alt="" className="h-full w-full object-cover" />
+            <img
+              src={assets.bannerUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
           ) : (
             <div className="h-full w-full bg-gradient-to-br from-slate-800 via-slate-900 to-gray-950" aria-hidden />
           )}
@@ -278,8 +293,13 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
 
           {val(assets.logoUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={assets.logoUrl} alt=""
-              className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:h-12 sm:w-12" />
+            <img
+              src={assets.logoUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:h-12 sm:w-12"
+            />
           ) : null}
 
           <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-5 pb-4 sm:px-6">
@@ -296,8 +316,13 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
         <div className="absolute -bottom-10 left-5 z-10 sm:left-6">
           {val(assets.profilePhotoUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={assets.profilePhotoUrl} alt=""
-              className="h-20 w-20 rounded-xl border-[3px] border-white bg-white object-cover shadow-lg" />
+            <img
+              src={assets.profilePhotoUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="h-20 w-20 rounded-xl border-[3px] border-white bg-white object-cover shadow-lg"
+            />
           ) : (
             <div className="flex h-20 w-20 items-center justify-center rounded-xl border-[3px] border-white bg-slate-800 text-lg font-bold tracking-wide text-white shadow-lg" aria-hidden>
               {initials(p.firstName, p.lastName)}
@@ -386,8 +411,13 @@ export function PublicProfileCard({ profile }: PublicProfileCardProps) {
                 {/* Clickable PDF thumbnail — opens fullscreen viewer */}
                 <button type="button" onClick={() => setPdfOpen(true)}
                   className="group relative w-full overflow-hidden rounded-lg border border-gray-200 bg-gray-100 transition hover:border-gray-300 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400">
+                  {/* V-018: sandboxed inline preview thumbnail. */}
                   <iframe title={t('profile.viewPolicy')} src={ins.pdfUrl}
-                    className="pointer-events-none h-[200px] w-full border-0" tabIndex={-1} />
+                    className="pointer-events-none h-[200px] w-full border-0"
+                    tabIndex={-1}
+                    sandbox="allow-scripts allow-popups"
+                    referrerPolicy="no-referrer"
+                    loading="lazy" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/0 transition group-hover:bg-black/30">
                     <span className="flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-gray-800 opacity-0 shadow-lg transition group-hover:opacity-100">
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-4 w-4">

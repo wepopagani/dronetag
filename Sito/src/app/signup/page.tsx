@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { signupWithEmail } from '@/lib/firebase/auth';
 import { ensureAccount } from '@/lib/firebase/account';
+import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -52,6 +53,7 @@ export default function SignupPage() {
           lastName: lastName.trim(),
         });
       }
+      trackEvent('signup');
       // Routing: useEffect picks /admin vs /account once AuthContext has isAdmin.
     } catch (err) {
       const message =
@@ -167,6 +169,10 @@ export default function SignupPage() {
             {t('nav.home')}
           </Link>
         </div>
+
+        <p className="mt-6 rounded-lg border border-gray-200 bg-white px-4 py-3 text-[11px] leading-relaxed text-gray-500">
+          {t('legal.platformDisclaimer')}
+        </p>
       </div>
     </div>
   );

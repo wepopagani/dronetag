@@ -30,8 +30,10 @@ export async function ensureAccount(
   const account: UserAccount = {
     uid,
     email,
+    accountType: seed.accountType ?? 'private',
     firstName: seed.firstName ?? '',
     lastName: seed.lastName ?? '',
+    dateOfBirth: seed.dateOfBirth ?? '',
     phone: seed.phone ?? '',
     address: seed.address ?? {
       line1: '',
@@ -40,11 +42,32 @@ export async function ensureAccount(
       postalCode: '',
       country: '',
     },
+    companyName: seed.companyName ?? '',
+    companyContactPerson: seed.companyContactPerson ?? '',
+    companyVat: seed.companyVat ?? '',
+    companyUniqueNumber: seed.companyUniqueNumber ?? '',
     createdAt: now,
     updatedAt: now,
   };
   accounts = [...accounts, account];
   return account;
+}
+
+export async function updateAccount(
+  uid: string,
+  patch: Partial<UserAccount>,
+): Promise<void> {
+  await delay();
+  accounts = accounts.map((a) =>
+    a.uid === uid
+      ? { ...a, ...patch, uid: a.uid, updatedAt: new Date().toISOString() }
+      : a,
+  );
+}
+
+export async function listAllAccounts(): Promise<UserAccount[]> {
+  await delay();
+  return [...accounts].sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
 export async function getOrdersByUser(uid: string): Promise<Order[]> {

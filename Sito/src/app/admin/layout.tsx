@@ -1,12 +1,14 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { AdminSubNav } from '@/components/layout/AdminSubNav';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading, isAdmin } = useAuth();
   const { t } = useLanguage();
 
@@ -33,5 +35,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return null;
   }
 
-  return <div className="min-h-[calc(100vh-4rem)] bg-gray-50">{children}</div>;
+  // The overview page renders its own sub-nav so we don't double-wrap it.
+  // Every other admin route gets the sub-nav from the layout.
+  const showSubNav = pathname !== '/admin';
+
+  return (
+    <div className="min-h-[calc(100vh-4rem)] bg-gray-50">
+      {showSubNav ? <AdminSubNav /> : null}
+      {children}
+    </div>
+  );
 }

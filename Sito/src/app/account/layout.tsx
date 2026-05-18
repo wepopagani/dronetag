@@ -34,8 +34,15 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   if (!user) return null;
 
   const tabs = [
-    { href: '/account/profile', label: t('account.tabProfile') },
-    { href: '/account/orders', label: t('account.tabOrders') },
+    { href: '/account/profile', label: t('account.tabProfile'), prefix: '/account/profile' },
+    { href: '/account/operators', label: t('account.tab.operators'), prefix: '/account/operators' },
+    { href: '/account/drones', label: t('account.tab.drones'), prefix: '/account/drones' },
+    { href: '/account/insurances', label: t('account.tab.insurances'), prefix: '/account/insurances' },
+    { href: '/account/certificates', label: t('account.tab.certificates'), prefix: '/account/certificates' },
+    { href: '/account/documents', label: t('account.tab.documents'), prefix: '/account/documents' },
+    { href: '/account/inbox', label: t('inbox.tab'), prefix: '/account/inbox' },
+    { href: '/account/billing', label: t('account.tab.billing'), prefix: '/account/billing' },
+    { href: '/account/orders', label: t('account.tabOrders'), prefix: '/account/orders' },
   ];
 
   return (
@@ -51,17 +58,18 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
           <p className="mt-1 text-sm text-gray-500">{t('account.subtitle')}</p>
         </div>
 
-        <nav className="mt-6 flex items-center gap-1 border-b border-gray-200">
+        <nav
+          className="mt-6 flex items-center gap-1 overflow-x-auto border-b border-gray-200"
+          aria-label="Account sections"
+        >
           {tabs.map((tab) => {
-            const active =
-              pathname === tab.href ||
-              (tab.href === '/account/orders' && pathname.startsWith('/account/orders'));
+            const active = pathname === tab.href || pathname.startsWith(`${tab.prefix}/`);
             return (
               <Link
                 key={tab.href}
                 href={tab.href}
                 className={classNames(
-                  '-mb-px border-b-2 px-4 py-2.5 text-sm font-medium transition',
+                  '-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2.5 text-sm font-medium transition',
                   active
                     ? 'border-blue-600 text-blue-700'
                     : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700',

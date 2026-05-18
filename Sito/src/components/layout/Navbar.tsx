@@ -20,7 +20,7 @@ export function Navbar() {
     'rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900';
 
   return (
-    <header className="fixed top-0 right-0 left-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
+    <header className="safe-pt fixed top-0 right-0 left-0 z-50 border-b border-gray-200 bg-white/95 backdrop-blur-sm">
       {DEMO_MODE ? (
         <div className="bg-amber-500 px-4 py-1.5 text-center text-xs font-medium text-white">
           Demo Mode — running with sample data, no Firebase connected
