@@ -1,0 +1,30 @@
+# Netlify build configuration — REPO ROOT.
+#
+# The Next.js application lives inside `Sito/`, not at the git root. Netlify
+# scans for `netlify.toml` ONLY at the repository root (`/opt/build/repo`), so
+# this file MUST stay here. Putting it inside `Sito/` makes Netlify ignore it
+# entirely and the build then runs from a directory with no `package.json`
+# → `npm error ENOENT … /opt/build/repo/package.json`.
+#
+# `base = "Sito"` tells Netlify to:
+#   • cd into Sito/ before running `npm install` / `npm run build`,
+#   • resolve `publish` relative to Sito/ as well.
+#
+# Next.js 16 + React 19 require Node >= 20.9; Netlify's default builder ships
+# Node 18 which causes a silent `next build` crash → exit 254. We pin Node 22
+# (current LTS) explicitly.
+
+[build]
+  base    = "Sito"
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NODE_VERSION = "22"
+
+# Healthcheck redirect for uptime monitors that prefer a short path.
+# `/api/health` is the real endpoint; `/health` is the friendly alias.
+[[redirects]]
+  from   = "/health"
+  to     = "/api/health"
+  status = 200

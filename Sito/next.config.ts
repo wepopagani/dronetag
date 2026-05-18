@@ -12,9 +12,23 @@ if (process.env.NODE_ENV === 'production') {
   ];
   const missing = required.filter((k) => !process.env[k]);
   if (missing.length > 0) {
+    // Print a loud banner BEFORE throwing so the failure is visible even
+    // when the surrounding CI runner (Netlify, Vercel) truncates the stack
+    // trace. Netlify's log viewer keeps stderr lines, so the operator can
+    // scroll up and see exactly which variable is missing.
+    const banner = '═'.repeat(72);
+    process.stderr.write(
+      `\n${banner}\n` +
+      `[next.config] Production build refused — missing env vars:\n` +
+      missing.map((k) => `  • ${k}`).join('\n') +
+      `\n\nFix: set every NEXT_PUBLIC_FIREBASE_* variable in your host's\n` +
+      `environment configuration (Netlify: Site settings → Environment\n` +
+      `variables; Vercel: Project settings → Environment Variables). See\n` +
+      `.env.local.example for the full list and docs/DEPLOY_STAGING.md §1.\n` +
+      `${banner}\n\n`,
+    );
     throw new Error(
-      `[next.config] Production build refused: missing required env vars: ${missing.join(', ')}.\n` +
-      'Set every NEXT_PUBLIC_FIREBASE_* var before building. See .env.local.example.',
+      `[next.config] Production build refused: missing required env vars: ${missing.join(', ')}.`,
     );
   }
 }
