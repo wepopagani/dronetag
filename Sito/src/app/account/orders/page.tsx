@@ -52,15 +52,6 @@ export default function AccountOrdersPage() {
             {t('orders.emptyTitle')}
           </h2>
           <p className="mt-1 text-sm text-gray-500">{t('orders.emptyDesc')}</p>
-          <Link
-            href="/shop"
-            className="mt-5 inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            {t('orders.emptyCta')}
-            <svg className="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5} aria-hidden>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M13 5l7 7-7 7M5 12h14" />
-            </svg>
-          </Link>
         </div>
       </Card>
     );

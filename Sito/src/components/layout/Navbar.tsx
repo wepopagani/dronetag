@@ -68,10 +68,6 @@ export function Navbar() {
             mobileOpen ? 'flex' : 'hidden md:flex'
           )}
         >
-          <Link href="/shop" className={navLinkClass} onClick={() => setMobileOpen(false)}>
-            {t('nav.shop')}
-          </Link>
-
           <div className="flex items-center gap-2 px-3 py-2 md:py-0">
             <label htmlFor="nav-language" className="sr-only">
               {t('common.language')}
