@@ -10,7 +10,7 @@
 
 import {
   collection, deleteDoc, doc, getDoc, getDocs,
-  orderBy, query, updateDoc, where,
+  query, updateDoc, where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -54,13 +54,12 @@ export async function listOperators(userId: string): Promise<Operator[]> {
   if (DEMO_MODE) return demo.listOperators(userId);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, OPERATORS),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'asc'),
+  const snap = await getDocs(
+    query(collection(db, OPERATORS), where('userId', '==', userId)),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => operatorFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => operatorFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
 }
 
 export async function getOperator(id: string): Promise<Operator | null> {
@@ -122,9 +121,10 @@ export async function deleteOperator(id: string): Promise<void> {
 /** Admin-only: list every operator across users. */
 export async function listAllOperators(): Promise<Operator[]> {
   if (DEMO_MODE) return demo.listAllOperators();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
-  const q = query(collection(db, OPERATORS), orderBy('createdAt', 'asc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => operatorFromRaw(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, OPERATORS));
+  return snap.docs
+    .map((d) => operatorFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
 }

@@ -104,13 +104,12 @@ export async function listDronesByUser(userId: string): Promise<Drone[]> {
   if (DEMO_MODE) return demo.listDronesByUser(userId);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, DRONES),
-    where('userId', '==', userId),
-    orderBy('updatedAt', 'desc'),
+  const snap = await getDocs(
+    query(collection(db, DRONES), where('userId', '==', userId)),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => droneFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => droneFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }
 
 export async function getDrone(id: string): Promise<Drone | null> {

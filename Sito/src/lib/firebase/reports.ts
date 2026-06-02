@@ -9,7 +9,7 @@
  */
 
 import {
-  collection, doc, getDocs, orderBy, query, updateDoc, where,
+  collection, doc, getDocs, query, updateDoc, where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -57,26 +57,24 @@ export async function listReportsForOwner(ownerUserId: string): Promise<Report[]
   if (DEMO_MODE) return demo.listReports(ownerUserId);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, REPORTS),
-    where('ownerUserId', '==', ownerUserId),
-    orderBy('createdAt', 'desc'),
+  const snap = await getDocs(
+    query(collection(db, REPORTS), where('ownerUserId', '==', ownerUserId)),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => reportFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => reportFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
 export async function listReportsForDrone(droneId: string): Promise<Report[]> {
   if (DEMO_MODE) return demo.listReportsForDrone(droneId);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, REPORTS),
-    where('droneId', '==', droneId),
-    orderBy('createdAt', 'desc'),
+  const snap = await getDocs(
+    query(collection(db, REPORTS), where('droneId', '==', droneId)),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => reportFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => reportFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
 /**

@@ -9,7 +9,7 @@
 
 import {
   collection, deleteDoc, doc, getDoc, getDocs,
-  orderBy, query, updateDoc, where,
+  query, updateDoc, where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -48,13 +48,12 @@ export async function listInsurances(userId: string): Promise<Insurance[]> {
   if (DEMO_MODE) return demo.listInsurances(userId);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, INSURANCES),
-    where('userId', '==', userId),
-    orderBy('updatedAt', 'desc'),
+  const snap = await getDocs(
+    query(collection(db, INSURANCES), where('userId', '==', userId)),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => insuranceFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => insuranceFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }
 
 export async function getInsurance(id: string): Promise<Insurance | null> {
@@ -119,9 +118,10 @@ export async function deleteInsurance(id: string): Promise<void> {
 /** Admin-only: list every insurance policy across users. */
 export async function listAllInsurances(): Promise<Insurance[]> {
   if (DEMO_MODE) return demo.listAllInsurances();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
-  const q = query(collection(db, INSURANCES), orderBy('updatedAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => insuranceFromRaw(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, INSURANCES));
+  return snap.docs
+    .map((d) => insuranceFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }

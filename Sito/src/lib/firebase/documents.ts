@@ -12,7 +12,7 @@
 
 import {
   collection, deleteDoc, doc, getDoc, getDocs,
-  orderBy, query, updateDoc, where,
+  query, updateDoc, where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -47,13 +47,12 @@ export async function listDocuments(userId: string): Promise<DocumentRef[]> {
   if (DEMO_MODE) return demo.listDocuments(userId);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, DOCUMENTS),
-    where('userId', '==', userId),
-    orderBy('updatedAt', 'desc'),
+  const snap = await getDocs(
+    query(collection(db, DOCUMENTS), where('userId', '==', userId)),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => documentFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => documentFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }
 
 export async function getDocument(id: string): Promise<DocumentRef | null> {
@@ -106,9 +105,10 @@ export async function deleteDocument(id: string): Promise<void> {
 /** Admin-only: list every document across users. */
 export async function listAllDocuments(): Promise<DocumentRef[]> {
   if (DEMO_MODE) return demo.listAllDocuments();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
-  const q = query(collection(db, DOCUMENTS), orderBy('updatedAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => documentFromRaw(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, DOCUMENTS));
+  return snap.docs
+    .map((d) => documentFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }

@@ -135,9 +135,10 @@ export async function getAllProfiles(): Promise<Profile[]> {
   if (DEMO_MODE) return demoStore.getAllProfiles();
   await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
-  const q = query(collection(db, PROFILES), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => profileFromSnapshot(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, PROFILES));
+  return snap.docs
+    .map((d) => profileFromSnapshot(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
 
 // ─── Search & filter ─────────────────────────────────────────────────────────

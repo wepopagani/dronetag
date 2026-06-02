@@ -7,7 +7,7 @@
 
 import {
   collection, deleteDoc, doc, getDoc, getDocs,
-  orderBy, query, updateDoc, where,
+  query, updateDoc, where,
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
@@ -41,13 +41,12 @@ export async function listCertificates(userId: string): Promise<Certificate[]> {
   if (DEMO_MODE) return demo.listCertificates(userId);
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
-  const q = query(
-    collection(db, CERTIFICATES),
-    where('userId', '==', userId),
-    orderBy('createdAt', 'asc'),
+  const snap = await getDocs(
+    query(collection(db, CERTIFICATES), where('userId', '==', userId)),
   );
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => certificateFromRaw(d.id, d.data() as Record<string, unknown>));
+  return snap.docs
+    .map((d) => certificateFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (a.createdAt || '').localeCompare(b.createdAt || ''));
 }
 
 export async function getCertificate(id: string): Promise<Certificate | null> {
@@ -99,9 +98,10 @@ export async function deleteCertificate(id: string): Promise<void> {
 /** Admin-only: list every certificate across users. */
 export async function listAllCertificates(): Promise<Certificate[]> {
   if (DEMO_MODE) return demo.listAllCertificates();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
-  const q = query(collection(db, CERTIFICATES), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => certificateFromRaw(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, CERTIFICATES));
+  return snap.docs
+    .map((d) => certificateFromRaw(d.id, d.data() as Record<string, unknown>))
+    .sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }
