@@ -1,4 +1,12 @@
 import type { NextConfig } from 'next';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+// App lives in Sito/ while git root is dronetag/ — Turbopack must not walk up
+// to the repo root (no package.json / node_modules there).
+const projectRoot = path.resolve(
+  path.dirname(fileURLToPath(import.meta.url)),
+);
 
 // PR-SEC-2 V-036: production builds MUST have valid Firebase env vars.
 // Without them, DEMO_MODE silently activates at runtime and treats every
@@ -66,6 +74,9 @@ const FIREBASE_API_HOSTS = [
   'https://content-firebaseappcheck.googleapis.com',
 ];
 
+// Firebase Auth embeds a hidden iframe on *.firebaseapp.com (see /__/auth/iframe).
+const FIREBASE_AUTH_FRAME_HOSTS = ['https://*.firebaseapp.com'];
+
 const RECAPTCHA_HOSTS = [
   'https://www.google.com',
   'https://www.recaptcha.net',
@@ -127,11 +138,11 @@ const csp = [
     ...RECAPTCHA_HOSTS,
   ].join(' '),
 
-  // Iframes (PDF previews + reCAPTCHA challenge frame). Restricted to
-  // Firebase Storage (where uploaded PDFs live) and reCAPTCHA hosts.
+  // Iframes: Firebase Auth session iframe, PDF previews, reCAPTCHA challenge.
   [
     `frame-src`,
     `'self'`,
+    ...FIREBASE_AUTH_FRAME_HOSTS,
     ...TRUSTED_PDF_HOSTS,
     ...RECAPTCHA_HOSTS,
   ].join(' '),
@@ -182,6 +193,10 @@ const securityHeaders: { key: string; value: string }[] = [
 ];
 
 const nextConfig: NextConfig = {
+  // Monorepo layout: app lives in Sito/ but repo root may contain other lockfiles.
+  turbopack: {
+    root: projectRoot,
+  },
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },

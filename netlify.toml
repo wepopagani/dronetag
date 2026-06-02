@@ -22,6 +22,10 @@
 [build.environment]
   NODE_VERSION = "22"
 
+# Next.js App Router (API routes, proxy, SSR) — required for remote staging URL.
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
 # Healthcheck redirect for uptime monitors that prefer a short path.
 # `/api/health` is the real endpoint; `/health` is the friendly alias.
 [[redirects]]
