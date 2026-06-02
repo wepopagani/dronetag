@@ -749,6 +749,21 @@ export const translations: TranslationMap = {
   'admin.users.create.errorNameRequired': 'First name and last name are required.',
   'admin.users.create.errorInvalidEmail': 'Enter a valid email address.',
   'admin.users.create.errorAuth': 'Admin session expired. Sign out, sign in again, and retry.',
+  'admin.users.create.errorNetwork':
+    'Network error while creating the user. Check your connection and try again.',
+  'admin.users.create.errors.summary':
+    '{count} fields need attention before the account can be created.',
+  'admin.users.create.errors.email_required': 'Email is required so the user can sign in.',
+  'admin.users.create.errors.email_invalid': 'Enter a valid email address (e.g. name@company.it).',
+  'admin.users.create.errors.password_required':
+    'Temporary password is required (share it with the user securely).',
+  'admin.users.create.errors.password_too_short': 'Password must be at least 6 characters.',
+  'admin.users.create.errors.firstName_required': 'First name is required.',
+  'admin.users.create.errors.lastName_required': 'Last name is required.',
+  'admin.users.create.errors.companyName_required':
+    'Company name is required for company accounts.',
+  'admin.users.create.errors.companyContactPerson_required':
+    'Contact person is required for company accounts.',
   'admin.users.col.name': 'Name',
   'admin.users.col.type': 'Type',
   'admin.users.col.email': 'Email',

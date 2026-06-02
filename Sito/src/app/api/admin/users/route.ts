@@ -11,6 +11,10 @@ import { requireAdminFromRequest } from '@/lib/server/adminAuth';
 import { adminAuth, adminFirestore } from '@/lib/server/firebaseAdmin';
 import { BASE_SLOTS } from '@/lib/types/entities';
 import type { AccountType } from '@/lib/types/account';
+import {
+  apiFieldsFromCodes,
+  validateAdminCreateUserInput,
+} from '@/lib/validation/adminCreateUser';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -58,14 +62,24 @@ export async function POST(request: Request) {
   const accountTypeRaw = str(body.accountType);
   const accountType: AccountType = accountTypeRaw === 'company' ? 'company' : 'private';
 
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: 'invalid email' }, { status: 400 });
-  }
-  if (password.length < 6) {
-    return NextResponse.json({ error: 'password too short' }, { status: 400 });
-  }
-  if (!firstName || !lastName) {
-    return NextResponse.json({ error: 'name required' }, { status: 400 });
+  const validationCodes = validateAdminCreateUserInput({
+    email,
+    password,
+    accountType,
+    firstName,
+    lastName,
+    companyName: str(body.companyName),
+    companyContactPerson: str(body.companyContactPerson),
+  });
+  if (validationCodes.length > 0) {
+    return NextResponse.json(
+      {
+        error: 'validation_failed',
+        fields: apiFieldsFromCodes(validationCodes),
+        codes: validationCodes,
+      },
+      { status: 400 },
+    );
   }
 
   const addr = body.address ?? {};

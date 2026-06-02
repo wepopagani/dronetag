@@ -750,6 +750,24 @@ export const translations: TranslationMap = {
   'admin.users.create.errorInvalidEmail': 'Inserisci un indirizzo email valido.',
   'admin.users.create.errorAuth':
     'Sessione admin scaduta. Esci, rientra e riprova.',
+  'admin.users.create.errorNetwork':
+    'Errore di rete durante la creazione. Controlla la connessione e riprova.',
+  'admin.users.create.errors.summary':
+    '{count} campi da correggere prima di creare l\u2019account.',
+  'admin.users.create.errors.email_required':
+    'L\u2019email \u00e8 obbligatoria: serve all\u2019utente per accedere.',
+  'admin.users.create.errors.email_invalid':
+    'Inserisci un indirizzo email valido (es. nome@azienda.it).',
+  'admin.users.create.errors.password_required':
+    'La password temporanea \u00e8 obbligatoria (comunicala all\u2019utente in modo sicuro).',
+  'admin.users.create.errors.password_too_short':
+    'La password deve avere almeno 6 caratteri.',
+  'admin.users.create.errors.firstName_required': 'Il nome \u00e8 obbligatorio.',
+  'admin.users.create.errors.lastName_required': 'Il cognome \u00e8 obbligatorio.',
+  'admin.users.create.errors.companyName_required':
+    'La ragione sociale \u00e8 obbligatoria per account azienda.',
+  'admin.users.create.errors.companyContactPerson_required':
+    'La persona di contatto \u00e8 obbligatoria per account azienda.',
   'admin.users.col.name': 'Nome',
   'admin.users.col.type': 'Tipo',
   'admin.users.col.email': 'Email',
