@@ -9,6 +9,7 @@
 
 import Link from 'next/link';
 import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { listAllAccounts } from '@/lib/firebase/account';
 import type { UserAccount } from '@/lib/types/account';
@@ -20,18 +21,24 @@ import { SectionHeader } from '@/components/ui/SectionHeader';
 
 export default function AdminUsersListPage() {
   const { t } = useLanguage();
+  const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserAccount[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
+    if (!isAdmin) return;
     let cancelled = false;
+    setLoading(true);
+    setLoadError(false);
     (async () => {
       try {
         const list = await listAllAccounts();
         if (!cancelled) setUsers(list);
       } catch (err) {
         console.error('[admin users] load failed', err);
+        if (!cancelled) setLoadError(true);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -39,7 +46,7 @@ export default function AdminUsersListPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [isAdmin]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -79,6 +86,10 @@ export default function AdminUsersListPage() {
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
           {t('common.loading')}
         </div>
+      ) : loadError ? (
+        <Card className="mt-6 text-center" padding="lg">
+          <p className="text-sm text-amber-800">{t('admin.users.loadError')}</p>
+        </Card>
       ) : filtered.length === 0 ? (
         <Card className="mt-6 text-center" padding="lg">
           <p className="text-sm text-gray-500">{t('admin.users.empty')}</p>

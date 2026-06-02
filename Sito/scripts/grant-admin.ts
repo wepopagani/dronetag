@@ -7,7 +7,12 @@
  * and the client-side email allowlist has been removed from
  * AuthContext.
  *
- * Usage (after configuring FIREBASE_SERVICE_ACCOUNT_KEY in .env.local):
+ * Credentials (first match wins):
+ *   1. FIREBASE_SERVICE_ACCOUNT_KEY — JSON one-liner in .env.local
+ *   2. gcloud Application Default Credentials — when org policy blocks
+ *      key download, run: gcloud auth application-default login
+ *
+ * Usage:
  *
  *   npm run grant-admin -- <email>          # promote
  *   npm run grant-admin -- <email> --revoke # demote
@@ -17,7 +22,7 @@
  * (periodic refresh in AuthContext) or immediately on next sign-in.
  */
 
-import { initializeApp, cert, getApps } from 'firebase-admin/app';
+import { applicationDefault, cert, initializeApp, getApps } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 
 interface Args {
@@ -36,28 +41,39 @@ function parseArgs(argv: string[]): Args {
   return { email, revoke: flags.has('--revoke') };
 }
 
+function initAdminApp(): void {
+  if (getApps().length > 0) return;
+
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
+  if (raw) {
+    try {
+      initializeApp({ credential: cert(JSON.parse(raw) as Parameters<typeof cert>[0]) });
+      return;
+    } catch (err) {
+      console.error('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON:', err);
+      process.exit(2);
+    }
+  }
+
+  // Fallback when org policy blocks service-account key download.
+  // Requires: gcloud auth application-default login
+  try {
+    initializeApp({ credential: applicationDefault() });
+  } catch (err) {
+    console.error(
+      'No Firebase Admin credentials found.\n' +
+      '  Option A: set FIREBASE_SERVICE_ACCOUNT_KEY in .env.local (JSON one-liner)\n' +
+      '  Option B: gcloud auth application-default login (no key file needed)',
+    );
+    console.error(err);
+    process.exit(2);
+  }
+}
+
 async function main() {
   const args = parseArgs(process.argv.slice(2));
 
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!raw) {
-    console.error(
-      'Missing FIREBASE_SERVICE_ACCOUNT_KEY env. Add the JSON of a Firebase ' +
-      'service-account key file to .env.local (single-line) and re-run.',
-    );
-    process.exit(2);
-  }
-  let sa: Parameters<typeof cert>[0];
-  try {
-    sa = JSON.parse(raw);
-  } catch (err) {
-    console.error('FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON:', err);
-    process.exit(2);
-  }
-
-  if (getApps().length === 0) {
-    initializeApp({ credential: cert(sa) });
-  }
+  initAdminApp();
   const auth = getAuth();
 
   const user = await auth.getUserByEmail(args.email).catch((err) => {

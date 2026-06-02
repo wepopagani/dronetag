@@ -732,6 +732,8 @@ export const translations: TranslationMap = {
   'admin.users.subtitle': 'Visualizza, cerca e modifica qualsiasi account sulla piattaforma.',
   'admin.users.searchPlaceholder': 'Nome, email, azienda, partita IVA\u2026',
   'admin.users.empty': 'Nessun utente',
+  'admin.users.loadError':
+    'Impossibile caricare gli utenti. Verifica di essere online, di avere i permessi admin (esci e rientra dopo grant-admin) e che le regole Firestore siano pubblicate.',
   'admin.users.col.name': 'Nome',
   'admin.users.col.type': 'Tipo',
   'admin.users.col.email': 'Email',

@@ -60,11 +60,18 @@ export function logout(): Promise<void> {
   return signOut(getFirebaseAuth());
 }
 
+export type AwaitFirebaseAuthOptions = {
+  /** Force-refresh the ID token so custom claims (e.g. `admin`) are current. */
+  refresh?: boolean;
+};
+
 /**
  * Wait until Auth has restored the session, then ensure an ID token exists when signed in.
  * Firestore calls before this often hit permission-denied (rules see no request.auth).
  */
-export async function awaitFirebaseAuthReady(): Promise<void> {
+export async function awaitFirebaseAuthReady(
+  options: AwaitFirebaseAuthOptions = {},
+): Promise<void> {
   if (DEMO_MODE) return;
   const auth = getFirebaseAuth();
   await new Promise<void>((resolve) => {
@@ -74,7 +81,7 @@ export async function awaitFirebaseAuthReady(): Promise<void> {
     });
   });
   const u = auth.currentUser;
-  if (u) await u.getIdToken();
+  if (u) await u.getIdToken(Boolean(options.refresh));
 }
 
 export function onAuthChange(

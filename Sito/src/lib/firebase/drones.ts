@@ -321,9 +321,11 @@ export async function clearActiveOperator(droneId: string): Promise<void> {
 /** Admin-only: list every drone across users (newest first). */
 export async function listAllDrones(): Promise<Drone[]> {
   if (DEMO_MODE) return demo.listAllDrones();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
-  const q = query(collection(db, DRONES), orderBy('updatedAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => droneFromRaw(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, DRONES));
+  const drones = snap.docs.map((d) =>
+    droneFromRaw(d.id, d.data() as Record<string, unknown>),
+  );
+  return drones.sort((a, b) => (b.updatedAt || '').localeCompare(a.updatedAt || ''));
 }

@@ -142,9 +142,11 @@ export async function markReportRead(id: string): Promise<void> {
 /** Admin-only: list every report across users (newest first). */
 export async function listAllReports(): Promise<Report[]> {
   if (DEMO_MODE) return demo.listAllReports();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
-  const q = query(collection(db, REPORTS), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => reportFromRaw(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, REPORTS));
+  const reports = snap.docs.map((d) =>
+    reportFromRaw(d.id, d.data() as Record<string, unknown>),
+  );
+  return reports.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }

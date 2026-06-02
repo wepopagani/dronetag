@@ -3,8 +3,6 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
-  query,
   setDoc,
   updateDoc,
 } from 'firebase/firestore';
@@ -117,9 +115,24 @@ export async function updateAccount(uid: string, patch: Partial<UserAccount>): P
  */
 export async function listAllAccounts(): Promise<UserAccount[]> {
   if (DEMO_MODE) return demoStore.listAllAccounts();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
+
+  if (typeof window !== 'undefined') {
+    try {
+      const res = await fetch('/api/admin/accounts', { credentials: 'same-origin' });
+      if (res.ok) {
+        const body = (await res.json()) as { accounts?: UserAccount[] };
+        if (Array.isArray(body.accounts)) return body.accounts;
+      }
+    } catch {
+      /* fall through to client Firestore */
+    }
+  }
+
   const db = getFirebaseDb();
-  const q = query(collection(db, USERS), orderBy('createdAt', 'desc'));
-  const snap = await getDocs(q);
-  return snap.docs.map((d) => accountFromRaw(d.id, d.data() as Record<string, unknown>));
+  const snap = await getDocs(collection(db, USERS));
+  const accounts = snap.docs.map((d) =>
+    accountFromRaw(d.id, d.data() as Record<string, unknown>),
+  );
+  return accounts.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
 }

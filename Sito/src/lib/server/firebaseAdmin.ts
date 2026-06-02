@@ -29,6 +29,7 @@ import {
   type App,
 } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
+import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 
 let cached: App | null = null;
 let initError: Error | null = null;
@@ -89,10 +90,12 @@ export function adminAuth() {
   return getAuth(getFirebaseAdmin());
 }
 
-/**
- * `firebase-admin/firestore` requires `@opentelemetry/api` as a peer
- * dep. Until we need server-side Firestore writes from the Next.js app
- * (Cloud Functions handle them today, and they have their own
- * `firebase-admin` install), we deliberately don't import that module
- * to keep the Next bundle slim.
- */
+let firestore: Firestore | null = null;
+
+/** Server-side Firestore (Admin SDK — bypasses security rules). */
+export function adminFirestore(): Firestore {
+  if (!firestore) {
+    firestore = getFirestore(getFirebaseAdmin());
+  }
+  return firestore;
+}

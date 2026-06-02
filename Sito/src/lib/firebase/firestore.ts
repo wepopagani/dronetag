@@ -133,7 +133,7 @@ export async function getProfileBySlug(slug: string): Promise<Profile | null> {
 
 export async function getAllProfiles(): Promise<Profile[]> {
   if (DEMO_MODE) return demoStore.getAllProfiles();
-  await awaitFirebaseAuthReady();
+  await awaitFirebaseAuthReady({ refresh: true });
   const db = getFirebaseDb();
   const q = query(collection(db, PROFILES), orderBy('createdAt', 'desc'));
   const snap = await getDocs(q);

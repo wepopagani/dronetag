@@ -732,6 +732,8 @@ export const translations: TranslationMap = {
   'admin.users.subtitle': 'View, search and edit any account on the platform.',
   'admin.users.searchPlaceholder': 'Name, email, company, VAT…',
   'admin.users.empty': 'No users yet',
+  'admin.users.loadError':
+    'Could not load users. Check you are online, have admin permissions (sign out and back in after grant-admin), and that Firestore rules are deployed.',
   'admin.users.col.name': 'Name',
   'admin.users.col.type': 'Type',
   'admin.users.col.email': 'Email',
