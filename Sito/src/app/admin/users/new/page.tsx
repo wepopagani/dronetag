@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { adminFetch } from '@/lib/client/adminApi';
 
 export default function AdminCreateUserPage() {
   const { t } = useLanguage();
@@ -43,18 +44,35 @@ export default function AdminCreateUserPage() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
+
+    const email = form.email.trim();
+    const password = form.password;
+    const firstName = form.firstName.trim();
+    const lastName = form.lastName.trim();
+
+    if (!email) {
+      setError(t('admin.users.create.errorInvalidEmail'));
+      return;
+    }
+    if (password.length < 6) {
+      setError(t('signup.errorPasswordShort'));
+      return;
+    }
+    if (!firstName || !lastName) {
+      setError(t('admin.users.create.errorNameRequired'));
+      return;
+    }
+
     setSaving(true);
     try {
-      const res = await fetch('/api/admin/users', {
+      const res = await adminFetch('/api/admin/users', {
         method: 'POST',
-        credentials: 'same-origin',
-        headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
-          email: form.email,
-          password: form.password,
+          email,
+          password,
           accountType: form.accountType,
-          firstName: form.firstName,
-          lastName: form.lastName,
+          firstName,
+          lastName,
           dateOfBirth: form.dateOfBirth,
           phone: form.phone,
           companyName: form.companyName,
@@ -72,9 +90,19 @@ export default function AdminCreateUserPage() {
       });
       const body = (await res.json()) as { uid?: string; error?: string };
       if (!res.ok) {
-        if (res.status === 409) setError(t('admin.users.create.errorEmailInUse'));
-        else if (body.error === 'password too short') setError(t('signup.errorPasswordShort'));
-        else setError(t('admin.users.create.errorGeneric'));
+        if (res.status === 401 || res.status === 403) {
+          setError(t('admin.users.create.errorAuth'));
+        } else if (res.status === 409) {
+          setError(t('admin.users.create.errorEmailInUse'));
+        } else if (body.error === 'password too short') {
+          setError(t('signup.errorPasswordShort'));
+        } else if (body.error === 'invalid email') {
+          setError(t('admin.users.create.errorInvalidEmail'));
+        } else if (body.error === 'name required') {
+          setError(t('admin.users.create.errorNameRequired'));
+        } else {
+          setError(t('admin.users.create.errorGeneric'));
+        }
         return;
       }
       if (body.uid) router.push(`/admin/users/${body.uid}`);
@@ -98,7 +126,7 @@ export default function AdminCreateUserPage() {
       />
 
       <Card className="mt-6" padding="md">
-        <form onSubmit={handleSubmit} className="space-y-4" noValidate>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <FormErrorBanner show={Boolean(error)} message={error ?? undefined} />
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input

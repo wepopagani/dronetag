@@ -8,6 +8,7 @@ import {
 } from 'firebase/firestore';
 
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
+import { adminFetch } from '@/lib/client/adminApi';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/accountStore';
 import type { AccountType, UserAccount } from '@/lib/types/account';
@@ -119,7 +120,7 @@ export async function listAllAccounts(): Promise<UserAccount[]> {
 
   if (typeof window !== 'undefined') {
     try {
-      const res = await fetch('/api/admin/accounts', { credentials: 'same-origin' });
+      const res = await adminFetch('/api/admin/accounts');
       if (res.ok) {
         const body = (await res.json()) as { accounts?: UserAccount[] };
         if (Array.isArray(body.accounts)) return body.accounts;

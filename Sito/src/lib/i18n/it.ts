@@ -746,6 +746,10 @@ export const translations: TranslationMap = {
   'admin.users.create.submit': 'Crea utente',
   'admin.users.create.errorEmailInUse': 'Esiste gi\u00e0 un account con questa email.',
   'admin.users.create.errorGeneric': 'Impossibile creare l\u2019utente. Riprova.',
+  'admin.users.create.errorNameRequired': 'Nome e cognome sono obbligatori.',
+  'admin.users.create.errorInvalidEmail': 'Inserisci un indirizzo email valido.',
+  'admin.users.create.errorAuth':
+    'Sessione admin scaduta. Esci, rientra e riprova.',
   'admin.users.col.name': 'Nome',
   'admin.users.col.type': 'Tipo',
   'admin.users.col.email': 'Email',

@@ -156,28 +156,59 @@ export function PWAClient() {
     };
   }, [installed]);
 
-  /* ── Connectivity. ─────────────────────────────────────────────── */
+  /* ── Connectivity (navigator.onLine + /api/health probe). ─────── */
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    // Initial value already captured via lazy state + ref initialiser.
 
-    function goOnline() {
-      setOnline(true);
-      if (wasOffline.current) {
+    let cancelled = false;
+
+    async function probe(): Promise<boolean> {
+      try {
+        const res = await fetch('/api/health', {
+          method: 'GET',
+          cache: 'no-store',
+          credentials: 'same-origin',
+        });
+        return res.ok;
+      } catch {
+        return false;
+      }
+    }
+
+    async function refreshOnline() {
+      const browserOnline = navigator.onLine;
+      const serverReachable = browserOnline ? await probe() : false;
+      const next = browserOnline && serverReachable;
+      if (cancelled) return;
+      setOnline(next);
+      if (next && wasOffline.current) {
         setShowReconnectToast(true);
         window.setTimeout(() => setShowReconnectToast(false), 3000);
       }
-      wasOffline.current = false;
+      if (!next) wasOffline.current = true;
+      else wasOffline.current = false;
+    }
+
+    function goOnline() {
+      void refreshOnline();
     }
     function goOffline() {
       setOnline(false);
       wasOffline.current = true;
     }
+
+    void refreshOnline();
     window.addEventListener('online', goOnline);
     window.addEventListener('offline', goOffline);
+    const interval = window.setInterval(() => {
+      void refreshOnline();
+    }, 60_000);
+
     return () => {
+      cancelled = true;
       window.removeEventListener('online', goOnline);
       window.removeEventListener('offline', goOffline);
+      window.clearInterval(interval);
     };
   }, []);
 
