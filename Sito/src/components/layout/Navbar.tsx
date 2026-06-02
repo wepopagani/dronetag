@@ -7,6 +7,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { logout } from '@/lib/firebase/auth';
 import { DEMO_MODE } from '@/lib/firebase/config';
+import { ALLOW_PUBLIC_SIGNUP } from '@/lib/config/features';
 import { LANGUAGES, type Language } from '@/lib/types';
 import { classNames } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
@@ -116,13 +117,15 @@ export function Navbar() {
               <Link href="/login" className={navLinkClass} onClick={() => setMobileOpen(false)}>
                 {t('nav.login')}
               </Link>
-              <Link
-                href="/signup"
-                className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
-                onClick={() => setMobileOpen(false)}
-              >
-                {t('nav.signup')}
-              </Link>
+              {ALLOW_PUBLIC_SIGNUP || DEMO_MODE ? (
+                <Link
+                  href="/signup"
+                  className="rounded-lg bg-slate-900 px-3 py-2 text-sm font-semibold text-white transition hover:bg-slate-800"
+                  onClick={() => setMobileOpen(false)}
+                >
+                  {t('nav.signup')}
+                </Link>
+              ) : null}
             </>
           )}
         </nav>

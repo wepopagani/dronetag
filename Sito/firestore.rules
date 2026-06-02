@@ -61,8 +61,7 @@ service cloud.firestore {
       // Owner can read, and create/update their own doc but cannot grant
       // themselves admin via field manipulation.
       allow read: if isSignedIn() && request.auth.uid == uid;
-      allow create: if isSignedIn() && request.auth.uid == uid
-                       && !('migration' in request.resource.data);
+      allow create: if false;
       allow update: if isSignedIn() && request.auth.uid == uid
                        && request.resource.data.diff(resource.data).affectedKeys()
                             .hasOnly([
@@ -77,8 +76,7 @@ service cloud.firestore {
     // ─── Pilot (`pilots/{uid}`, doc id = userId) ────────────────────────
     match /pilots/{uid} {
       allow read: if isSignedIn() && request.auth.uid == uid;
-      allow create: if isSignedIn() && request.auth.uid == uid
-                       && request.resource.data.userId == uid;
+      allow create: if false;
       allow update: if isSignedIn() && request.auth.uid == uid
                        && request.resource.data.diff(resource.data).affectedKeys()
                             .hasOnly([

@@ -73,6 +73,8 @@ export const translations = {
   'login.submit': 'Sign in',
   'login.noAccount': 'Don’t have an account?',
   'login.signupCta': 'Create one',
+  'login.adminProvisioned':
+    'Accounts are created by an administrator. Contact us if you need credentials.',
 
   // ── Sign-up form ──
   'signup.title': 'Create your account',
@@ -97,6 +99,9 @@ export const translations = {
   'account.noAddress': 'No address saved yet.',
   'account.editNotice': 'Profile editing will be available soon. To change any detail, please contact our support team.',
   'account.memberSince': 'Member since {date}',
+  'account.notProvisioned.title': 'Account not activated',
+  'account.notProvisioned.body':
+    'You can sign in, but your profile has not been created by an administrator yet. Contact DroneTag to get access.',
 
   // ── Orders ──
   'orders.emptyTitle': 'No orders yet',
@@ -761,6 +766,13 @@ export const translations = {
   'admin.users.empty': 'No users yet',
   'admin.users.loadError':
     'Could not load users. Check you are online, have admin permissions (sign out and back in after grant-admin), and that Firestore rules are deployed.',
+  'admin.users.create.title': 'New user',
+  'admin.users.create.subtitle':
+    'Create login credentials and Firestore profile. The user can sign in and manage their documents only.',
+  'admin.users.create.tempPassword': 'Temporary password',
+  'admin.users.create.submit': 'Create user',
+  'admin.users.create.errorEmailInUse': 'An account with this email already exists.',
+  'admin.users.create.errorGeneric': 'Could not create the user. Please try again.',
   'admin.users.col.name': 'Name',
   'admin.users.col.type': 'Type',
   'admin.users.col.email': 'Email',

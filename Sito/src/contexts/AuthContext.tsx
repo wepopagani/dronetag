@@ -28,7 +28,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { User } from 'firebase/auth';
 import { onAuthChange } from '@/lib/firebase/auth';
-import { ensureAccount } from '@/lib/firebase/account';
 import { DEMO_MODE } from '@/lib/firebase/config';
 
 const TOKEN_COOKIE = '__dronetag_idt';
@@ -103,13 +102,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAdmin(tokenResult.claims.admin === true);
       setIdTokenCookie(token);
       await postSessionCookie(token);
-      if (u.email) {
-        try {
-          await ensureAccount(u.uid, u.email);
-        } catch (err) {
-          console.warn('[auth] ensureAccount failed', err);
-        }
-      }
     }
 
     const unsubscribe = onAuthChange(async (u) => {

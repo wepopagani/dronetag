@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { loginWithEmail } from '@/lib/firebase/auth';
+import { ALLOW_PUBLIC_SIGNUP } from '@/lib/config/features';
+import { DEMO_MODE } from '@/lib/firebase/config';
 import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -120,12 +122,16 @@ function LoginInner() {
 
         {/* Footer */}
         <div className="mt-5 space-y-2 text-center">
-          <p className="text-xs text-gray-500">
-            {t('login.noAccount')}{' '}
-            <Link href="/signup" className="font-semibold text-gray-900 hover:underline">
-              {t('login.signupCta')}
-            </Link>
-          </p>
+          {ALLOW_PUBLIC_SIGNUP || DEMO_MODE ? (
+            <p className="text-xs text-gray-500">
+              {t('login.noAccount')}{' '}
+              <Link href="/signup" className="font-semibold text-gray-900 hover:underline">
+                {t('login.signupCta')}
+              </Link>
+            </p>
+          ) : (
+            <p className="text-xs text-gray-500">{t('login.adminProvisioned')}</p>
+          )}
           <Link href="/" className="inline-block text-xs font-medium text-gray-400 transition hover:text-gray-600">
             {t('nav.home')}
           </Link>

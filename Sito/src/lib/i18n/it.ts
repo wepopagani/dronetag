@@ -64,6 +64,8 @@ export const translations: TranslationMap = {
   'login.submit': 'Accedi',
   'login.noAccount': 'Non hai un account?',
   'login.signupCta': 'Registrati',
+  'login.adminProvisioned':
+    'Gli account sono creati dall\u2019amministratore. Se non hai ancora le credenziali, contattaci.',
 
   // ── Sign-up form ──
   'signup.title': 'Crea il tuo account',
@@ -88,6 +90,9 @@ export const translations: TranslationMap = {
   'account.noAddress': 'Nessun indirizzo salvato.',
   'account.editNotice': 'La modifica del profilo sarà presto disponibile. Per modificare i tuoi dati, contatta il nostro supporto.',
   'account.memberSince': 'Iscritto dal {date}',
+  'account.notProvisioned.title': 'Account non attivato',
+  'account.notProvisioned.body':
+    'Il tuo accesso esiste ma il profilo non \u00e8 stato ancora creato dall\u2019amministratore. Contatta DroneTag per l\u2019attivazione.',
 
   // ── Orders ──
   'orders.emptyTitle': 'Nessun ordine',
@@ -734,6 +739,13 @@ export const translations: TranslationMap = {
   'admin.users.empty': 'Nessun utente',
   'admin.users.loadError':
     'Impossibile caricare gli utenti. Verifica di essere online, di avere i permessi admin (esci e rientra dopo grant-admin) e che le regole Firestore siano pubblicate.',
+  'admin.users.create.title': 'Nuovo utente',
+  'admin.users.create.subtitle':
+    'Crea credenziali di accesso e profilo Firestore. L\u2019utente potr\u00e0 solo accedere e gestire i propri documenti.',
+  'admin.users.create.tempPassword': 'Password temporanea',
+  'admin.users.create.submit': 'Crea utente',
+  'admin.users.create.errorEmailInUse': 'Esiste gi\u00e0 un account con questa email.',
+  'admin.users.create.errorGeneric': 'Impossibile creare l\u2019utente. Riprova.',
   'admin.users.col.name': 'Nome',
   'admin.users.col.type': 'Tipo',
   'admin.users.col.email': 'Email',

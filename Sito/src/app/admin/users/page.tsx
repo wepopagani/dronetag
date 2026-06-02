@@ -18,6 +18,7 @@ import { formatDate } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SectionHeader } from '@/components/ui/SectionHeader';
+import { Button } from '@/components/ui/Button';
 
 export default function AdminUsersListPage() {
   const { t } = useLanguage();
@@ -69,7 +70,10 @@ export default function AdminUsersListPage() {
 
   return (
     <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
-      <SectionHeader title={t('admin.users.title')} description={t('admin.users.subtitle')} />
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <SectionHeader title={t('admin.users.title')} description={t('admin.users.subtitle')} />
+        <Button href="/admin/users/new">{t('admin.users.create.submit')}</Button>
+      </div>
 
       <div className="mt-2 max-w-md">
         <Input

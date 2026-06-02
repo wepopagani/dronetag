@@ -5,6 +5,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { AccountProvisionGate } from '@/components/account/AccountProvisionGate';
 import { classNames } from '@/lib/utils';
 
 export default function AccountLayout({ children }: { children: React.ReactNode }) {
@@ -46,6 +47,7 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
   ];
 
   return (
+    <AccountProvisionGate>
     <div className="min-h-[calc(100vh-4rem)] bg-gray-50">
       <div className="mx-auto max-w-5xl px-4 pt-8 pb-4 sm:px-6">
         <div className="flex flex-col gap-1">
@@ -84,5 +86,6 @@ export default function AccountLayout({ children }: { children: React.ReactNode 
 
       <div className="mx-auto max-w-5xl px-4 pb-16 sm:px-6">{children}</div>
     </div>
+    </AccountProvisionGate>
   );
 }

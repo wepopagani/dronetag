@@ -5,6 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { ALLOW_PUBLIC_SIGNUP } from '@/lib/config/features';
+import { DEMO_MODE } from '@/lib/firebase/config';
 import { signupWithEmail } from '@/lib/firebase/auth';
 import { ensureAccount } from '@/lib/firebase/account';
 import { trackEvent } from '@/lib/analytics';
@@ -26,6 +28,10 @@ export default function SignupPage() {
 
   useEffect(() => {
     if (authLoading) return;
+    if (!ALLOW_PUBLIC_SIGNUP && !DEMO_MODE) {
+      router.replace('/login');
+      return;
+    }
     if (user) router.replace(isAdmin ? '/admin' : '/account');
   }, [user, authLoading, isAdmin, router]);
 
