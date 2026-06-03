@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { Navbar } from '@/components/layout/Navbar';
-import { PWAClient } from '@/components/pwa/PWAClient';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -10,12 +9,6 @@ export const metadata: Metadata = {
   description:
     'Digital identification and document management for drone operators. Not an official aviation authority registry.',
   applicationName: 'DroneTag',
-  manifest: '/manifest.webmanifest',
-  appleWebApp: {
-    capable: true,
-    title: 'DroneTag',
-    statusBarStyle: 'default',
-  },
   icons: {
     icon: [
       { url: '/favicon.png', sizes: '32x32', type: 'image/png' },
@@ -27,7 +20,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
+  themeColor: '#050f24',
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover',
@@ -45,7 +38,6 @@ export default function RootLayout({
           <LanguageProvider>
             <Navbar />
             <main className="min-h-screen pt-16">{children}</main>
-            <PWAClient />
           </LanguageProvider>
         </AuthProvider>
       </body>

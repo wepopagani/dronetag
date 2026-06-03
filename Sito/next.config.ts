@@ -45,10 +45,8 @@ if (process.env.NODE_ENV === 'production') {
 //
 // Closes V-022 / V-023.
 //
-// CSP is shipped in REPORT-ONLY mode by default so we can observe what
-// breaks in the wild before flipping to enforce. Set `CSP_ENFORCE=true`
-// in the build environment to switch the header name from
-// `Content-Security-Policy-Report-Only` to `Content-Security-Policy`.
+// CSP is OFF by default (no header → no Report-Only console noise in Safari).
+// Set `CSP_ENFORCE=true` in the build environment when ready to enforce.
 //
 // The directives below are intentionally tight on `frame-ancestors`,
 // `base-uri`, `form-action` and `worker-src`, but allow `'unsafe-inline'`
@@ -147,11 +145,7 @@ const csp = [
     ...RECAPTCHA_HOSTS,
   ].join(' '),
 
-  // Service worker registered by src/components/pwa/PWAClient.tsx.
   `worker-src 'self'`,
-
-  // PWA manifest.
-  `manifest-src 'self'`,
 
   // Form submissions (login, signup, account forms).
   `form-action 'self'`,
@@ -166,12 +160,10 @@ const csp = [
   `upgrade-insecure-requests`,
 ].join('; ');
 
-const CSP_HEADER_NAME = process.env.CSP_ENFORCE === 'true'
-  ? 'Content-Security-Policy'
-  : 'Content-Security-Policy-Report-Only';
-
 const securityHeaders: { key: string; value: string }[] = [
-  { key: CSP_HEADER_NAME, value: csp },
+  ...(process.env.CSP_ENFORCE === 'true'
+    ? [{ key: 'Content-Security-Policy', value: csp }]
+    : []),
   { key: 'Strict-Transport-Security', value: 'max-age=63072000; includeSubDomains; preload' },
   { key: 'X-Content-Type-Options', value: 'nosniff' },
   { key: 'X-Frame-Options', value: 'DENY' },

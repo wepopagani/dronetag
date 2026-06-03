@@ -21,6 +21,8 @@
  * the client-side AuthContext + Firestore rules.
  */
 
+import { existsSync, readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import {
   applicationDefault,
   cert,
@@ -34,27 +36,50 @@ import { getFirestore, type Firestore } from 'firebase-admin/firestore';
 let cached: App | null = null;
 let initError: Error | null = null;
 
-function loadServiceAccount(): Parameters<typeof cert>[0] | null {
-  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (raw) {
-    try {
-      return JSON.parse(raw) as Parameters<typeof cert>[0];
-    } catch (err) {
-      throw new Error(
-        '[firebaseAdmin] FIREBASE_SERVICE_ACCOUNT_KEY is not valid JSON: ' +
-          (err instanceof Error ? err.message : String(err)),
-      );
-    }
+function parseServiceAccountJson(raw: string, label: string): Parameters<typeof cert>[0] {
+  try {
+    return JSON.parse(raw) as Parameters<typeof cert>[0];
+  } catch (err) {
+    throw new Error(
+      `[firebaseAdmin] ${label} is not valid JSON: ` +
+        (err instanceof Error ? err.message : String(err)),
+    );
   }
+}
+
+function serviceAccountPath(): string | null {
+  const pathEnv = process.env.FIREBASE_SERVICE_ACCOUNT_PATH?.trim();
+  return pathEnv ? resolve(pathEnv) : null;
+}
+
+function loadServiceAccount(): Parameters<typeof cert>[0] | null {
+  const raw = process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim();
+  if (raw) {
+    return parseServiceAccountJson(raw, 'FIREBASE_SERVICE_ACCOUNT_KEY');
+  }
+
+  const filePath = serviceAccountPath();
+  if (filePath) {
+    if (!existsSync(filePath)) {
+      throw new Error(`[firebaseAdmin] FIREBASE_SERVICE_ACCOUNT_PATH not found: ${filePath}`);
+    }
+    return parseServiceAccountJson(
+      readFileSync(filePath, 'utf8'),
+      `FIREBASE_SERVICE_ACCOUNT_PATH (${filePath})`,
+    );
+  }
+
   return null;
 }
 
 export function isFirebaseAdminConfigured(): boolean {
   if (cached) return true;
   if (initError) return false;
-  return Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_KEY)
-    || Boolean(process.env.FIREBASE_SERVICE_ACCOUNT_PATH)
-    || Boolean(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+  if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY?.trim()) return true;
+  const filePath = serviceAccountPath();
+  if (filePath && existsSync(filePath)) return true;
+  if (process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim()) return true;
+  return false;
 }
 
 export function getFirebaseAdmin(): App {
@@ -71,14 +96,15 @@ export function getFirebaseAdmin(): App {
       cached = initializeApp({ credential: cert(sa) });
       return cached;
     }
-    if (process.env.FIREBASE_SERVICE_ACCOUNT_PATH || process.env.GOOGLE_APPLICATION_CREDENTIALS) {
+    if (process.env.GOOGLE_APPLICATION_CREDENTIALS?.trim()) {
       cached = initializeApp({ credential: applicationDefault() });
       return cached;
     }
+
     throw new Error(
       '[firebaseAdmin] No Firebase Admin credentials configured. Set ' +
-      'FIREBASE_SERVICE_ACCOUNT_KEY (env JSON) or ' +
-      'FIREBASE_SERVICE_ACCOUNT_PATH / GOOGLE_APPLICATION_CREDENTIALS.',
+        'FIREBASE_SERVICE_ACCOUNT_KEY (JSON one-liner) or ' +
+        'FIREBASE_SERVICE_ACCOUNT_PATH (path to the service-account JSON file).',
     );
   } catch (err) {
     initError = err instanceof Error ? err : new Error(String(err));

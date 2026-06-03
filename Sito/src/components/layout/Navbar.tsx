@@ -35,7 +35,17 @@ export function Navbar() {
               className="flex items-center gap-2 text-sm font-bold text-gray-900 transition hover:text-gray-700"
               onClick={() => setMobileOpen(false)}
             >
-              <Image src="/logo.png" alt="DroneTag" width={662} height={166} className="h-8 w-auto sm:h-9" priority />
+              <span className="inline-flex shrink-0 overflow-hidden rounded-[0.65rem] sm:rounded-[0.75rem]">
+                <Image
+                  src="/logo.png"
+                  alt="DroneTag"
+                  width={512}
+                  height={512}
+                  className="block h-8 w-8 sm:h-9 sm:w-9"
+                  priority
+                  unoptimized
+                />
+              </span>
             </Link>
             {user && isAdmin ? (
               <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-amber-700">

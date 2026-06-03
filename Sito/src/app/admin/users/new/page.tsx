@@ -89,19 +89,41 @@ export default function AdminCreateUserPage() {
     }
   }
 
+  function setAccountType(next: AccountType) {
+    if (next === 'private') {
+      setForm((p) => ({
+        ...p,
+        accountType: next,
+        companyName: '',
+        companyContactPerson: '',
+        companyVat: '',
+        companyUniqueNumber: '',
+      }));
+      setFieldErrors((prev) => {
+        const nextErrors = { ...prev };
+        delete nextErrors.companyName;
+        delete nextErrors.companyContactPerson;
+        return nextErrors;
+      });
+      return;
+    }
+    patch('accountType', next);
+  }
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setSummary(null);
     setFieldErrors({});
 
+    const isCompany = form.accountType === 'company';
     const payload = {
       email: form.email.trim(),
       password: form.password,
       accountType: form.accountType,
       firstName: form.firstName.trim(),
       lastName: form.lastName.trim(),
-      companyName: form.companyName.trim(),
-      companyContactPerson: form.companyContactPerson.trim(),
+      companyName: isCompany ? form.companyName.trim() : '',
+      companyContactPerson: isCompany ? form.companyContactPerson.trim() : '',
     };
 
     const clientCodes = validateAdminCreateUserInput(payload);
@@ -115,8 +137,8 @@ export default function AdminCreateUserPage() {
           ...payload,
           dateOfBirth: form.dateOfBirth,
           phone: form.phone,
-          companyVat: form.companyVat,
-          companyUniqueNumber: form.companyUniqueNumber,
+          companyVat: isCompany ? form.companyVat.trim() : '',
+          companyUniqueNumber: isCompany ? form.companyUniqueNumber.trim() : '',
           address: {
             line1: form.addr1,
             line2: form.addr2,
@@ -133,6 +155,10 @@ export default function AdminCreateUserPage() {
       };
 
       if (!res.ok) {
+        if (res.status === 503) {
+          setSummary(t('admin.users.create.errorAdminSdk'));
+          return;
+        }
         if (res.status === 401 || res.status === 403) {
           setSummary(t('admin.users.create.errorAuth'));
           return;
@@ -202,7 +228,7 @@ export default function AdminCreateUserPage() {
               name="accountType"
               value={form.accountType}
               onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-                patch('accountType', e.target.value as AccountType)
+                setAccountType(e.target.value as AccountType)
               }
               options={[
                 { value: 'private', label: t('account.accountType.private') },
@@ -256,20 +282,20 @@ export default function AdminCreateUserPage() {
                   onChange={(e) => patch('companyContactPerson', e.target.value)}
                   error={fieldErrors.companyContactPerson}
                 />
+                <Input
+                  label={t('field.companyVat')}
+                  name="vat"
+                  value={form.companyVat}
+                  onChange={(e) => patch('companyVat', e.target.value)}
+                />
+                <Input
+                  label={t('field.companyUniqueNumber')}
+                  name="uniq"
+                  value={form.companyUniqueNumber}
+                  onChange={(e) => patch('companyUniqueNumber', e.target.value)}
+                />
               </>
             ) : null}
-            <Input
-              label={t('field.companyVat')}
-              name="vat"
-              value={form.companyVat}
-              onChange={(e) => patch('companyVat', e.target.value)}
-            />
-            <Input
-              label={t('field.companyUniqueNumber')}
-              name="uniq"
-              value={form.companyUniqueNumber}
-              onChange={(e) => patch('companyUniqueNumber', e.target.value)}
-            />
             <Input
               label={t('field.addressLine1')}
               name="addr1"

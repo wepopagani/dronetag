@@ -746,6 +746,8 @@ export const translations: TranslationMap = {
   'admin.users.create.submit': 'Crea utente',
   'admin.users.create.errorEmailInUse': 'Esiste gi\u00e0 un account con questa email.',
   'admin.users.create.errorGeneric': 'Impossibile creare l\u2019utente. Riprova.',
+  'admin.users.create.errorAdminSdk':
+    'Firebase Admin non configurato in locale. In .env.local imposta FIREBASE_SERVICE_ACCOUNT_PATH con il percorso del file JSON della service account (Console Firebase \u2192 Impostazioni \u2192 Account di servizio \u2192 Genera nuova chiave privata), poi riavvia npm run dev.',
   'admin.users.create.errorNameRequired': 'Nome e cognome sono obbligatori.',
   'admin.users.create.errorInvalidEmail': 'Inserisci un indirizzo email valido.',
   'admin.users.create.errorAuth':

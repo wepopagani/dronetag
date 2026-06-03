@@ -28,7 +28,7 @@ interface HealthPayload {
   status: 'ok' | 'degraded';
   build: { version: string; commit: string; environment: string; bootedAt: string };
   firebase: { adminConfigured: boolean };
-  security: { appCheckEnforce: boolean; cspMode: 'enforce' | 'report-only' };
+  security: { appCheckEnforce: boolean; cspMode: 'enforce' | 'report-only' | 'disabled' };
 }
 
 export default function AdminOverviewPage() {
@@ -144,7 +144,9 @@ function OpsFooter({ health }: { health: HealthPayload | null }) {
   const cspColour =
     health.security.cspMode === 'enforce'
       ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
-      : 'bg-amber-50 text-amber-800 ring-amber-600/20';
+      : health.security.cspMode === 'disabled'
+        ? 'bg-gray-100 text-gray-600 ring-gray-500/20'
+        : 'bg-amber-50 text-amber-800 ring-amber-600/20';
   const appCheckColour = health.security.appCheckEnforce
     ? 'bg-emerald-50 text-emerald-700 ring-emerald-600/20'
     : 'bg-amber-50 text-amber-800 ring-amber-600/20';

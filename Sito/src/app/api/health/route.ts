@@ -24,6 +24,7 @@ export async function GET() {
   const firebaseConfigured = isFirebaseAdminConfigured();
   const appCheckEnforce = (process.env.APP_CHECK_ENFORCE ?? 'true').toLowerCase() === 'true';
   const cspEnforce = process.env.CSP_ENFORCE === 'true';
+  const cspMode = cspEnforce ? 'enforce' : 'disabled';
 
   const status = firebaseConfigured ? 'ok' : 'degraded';
 
@@ -36,7 +37,7 @@ export async function GET() {
       },
       security: {
         appCheckEnforce,
-        cspMode: cspEnforce ? 'enforce' : 'report-only',
+        cspMode,
       },
       now: new Date().toISOString(),
     },

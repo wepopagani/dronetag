@@ -773,6 +773,8 @@ export const translations = {
   'admin.users.create.submit': 'Create user',
   'admin.users.create.errorEmailInUse': 'An account with this email already exists.',
   'admin.users.create.errorGeneric': 'Could not create the user. Please try again.',
+  'admin.users.create.errorAdminSdk':
+    'Firebase Admin is not configured locally. Set FIREBASE_SERVICE_ACCOUNT_PATH in .env.local to your service-account JSON file path (Firebase Console \u2192 Project settings \u2192 Service accounts \u2192 Generate new private key), then restart npm run dev.',
   'admin.users.create.errorNameRequired': 'First name and last name are required.',
   'admin.users.create.errorInvalidEmail': 'Enter a valid email address.',
   'admin.users.create.errorAuth': 'Admin session expired. Sign out, sign in again, and retry.',
