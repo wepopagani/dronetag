@@ -1,0 +1,20 @@
+/logo.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/favicon.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/favicon.ico
+  Cache-Control: public, max-age=0, must-revalidate
+
+/icon-192.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/icon-512.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate

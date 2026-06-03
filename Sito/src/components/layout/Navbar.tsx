@@ -37,7 +37,7 @@ export function Navbar() {
             >
               <span className="inline-flex shrink-0 overflow-hidden rounded-[0.65rem] sm:rounded-[0.75rem]">
                 <Image
-                  src="/logo.png"
+                  src="/logo.png?v=3"
                   alt="DroneTag"
                   width={512}
                   height={512}
