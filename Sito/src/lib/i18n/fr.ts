@@ -770,7 +770,18 @@ export const translations: TranslationMap = {
   'admin.users.col.type': 'Type',
   'admin.users.col.email': 'Email',
   'admin.users.col.created': 'Created',
-  'admin.users.openProfile': 'Open profile',
+  'admin.users.openProfile': 'Manage account',
+  'admin.users.editData': 'Edit details',
+  'common.showPassword': 'Show password',
+  'common.hidePassword': 'Hide password',
+  'admin.users.loginHint.title': 'User sign-in',
+  'admin.users.loginHint.body':
+    'The user signs in at /login with this email and the temporary password set at creation.',
+  'admin.users.publicHint.title': 'Public page (QR / NFC)',
+  'admin.users.publicHint.body':
+    'The public page is tied to a public drone with a slug. Manage it in the Drones section below.',
+  'admin.users.publicHint.none':
+    'No public drone yet: create a drone and set visibility to Public.',
   'admin.users.detail.account': 'Account fields',
   'admin.users.detail.pilot': 'Pilot identity',
   'admin.users.detail.slots': 'Slots',

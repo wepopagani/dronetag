@@ -12,9 +12,10 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { listAllAccounts } from '@/lib/firebase/account';
+import { listAllDrones } from '@/lib/firebase/drones';
 import type { UserAccount } from '@/lib/types/account';
 import { accountDisplayName } from '@/lib/utils/entities';
-import { formatDate } from '@/lib/utils';
+import { formatDate, getPublicProfileUrl } from '@/lib/utils';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -24,6 +25,7 @@ export default function AdminUsersListPage() {
   const { t } = useLanguage();
   const { isAdmin } = useAuth();
   const [users, setUsers] = useState<UserAccount[]>([]);
+  const [publicSlugByUser, setPublicSlugByUser] = useState<Map<string, string>>(new Map());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState('');
@@ -35,8 +37,17 @@ export default function AdminUsersListPage() {
     setLoadError(false);
     (async () => {
       try {
-        const list = await listAllAccounts();
-        if (!cancelled) setUsers(list);
+        const [list, drones] = await Promise.all([listAllAccounts(), listAllDrones()]);
+        if (!cancelled) {
+          setUsers(list);
+          const slugMap = new Map<string, string>();
+          for (const d of drones) {
+            if (d.visibility === 'public' && d.slug.trim() && !slugMap.has(d.userId)) {
+              slugMap.set(d.userId, d.slug.trim());
+            }
+          }
+          setPublicSlugByUser(slugMap);
+        }
       } catch (err) {
         console.error('[admin users] load failed', err);
         if (!cancelled) setLoadError(true);
@@ -100,7 +111,7 @@ export default function AdminUsersListPage() {
         </Card>
       ) : (
         <Card className="mt-6 overflow-x-auto" padding="none">
-          <table className="w-full min-w-[820px] border-collapse text-left text-sm">
+          <table className="w-full min-w-[960px] border-collapse text-left text-sm">
             <thead>
               <tr className="border-b border-gray-200 bg-slate-50/80">
                 <th className="px-4 py-3 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
@@ -136,12 +147,24 @@ export default function AdminUsersListPage() {
                     {u.createdAt ? formatDate(u.createdAt) : '—'}
                   </td>
                   <td className="px-4 py-3.5">
-                    <Link
-                      href={`/admin/users/${u.uid}`}
-                      className="rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200"
-                    >
-                      {t('admin.users.openProfile')}
-                    </Link>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Link
+                        href={`/admin/users/${u.uid}`}
+                        className="rounded-md bg-gray-100 px-2.5 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-200"
+                      >
+                        {t('admin.users.editData')}
+                      </Link>
+                      {publicSlugByUser.get(u.uid) ? (
+                        <a
+                          href={getPublicProfileUrl(publicSlugByUser.get(u.uid)!)}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                        >
+                          {t('dashboard.viewPublicProfile')}
+                        </a>
+                      ) : null}
+                    </div>
                   </td>
                 </tr>
               ))}

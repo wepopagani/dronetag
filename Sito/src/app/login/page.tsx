@@ -11,6 +11,7 @@ import { DEMO_MODE } from '@/lib/firebase/config';
 import { trackEvent } from '@/lib/analytics';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 
 export default function LoginPage() {
   return (
@@ -96,9 +97,8 @@ function LoginInner() {
               autoComplete="email"
               disabled={submitting}
             />
-            <Input
+            <PasswordInput
               name="password"
-              type="password"
               label={t('login.password')}
               value={password}
               onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}

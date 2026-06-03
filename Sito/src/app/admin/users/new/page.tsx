@@ -16,6 +16,7 @@ import { adminCreateUserMessages } from '@/lib/validation/adminCreateUserMessage
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
+import { PasswordInput } from '@/components/ui/PasswordInput';
 import { Select } from '@/components/ui/Select';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { SectionHeader } from '@/components/ui/SectionHeader';
@@ -213,11 +214,10 @@ export default function AdminCreateUserPage() {
               onChange={(e) => patch('email', e.target.value)}
               error={fieldErrors.email}
             />
-            <Input
+            <PasswordInput
               id="admin-create-password"
               label={t('admin.users.create.tempPassword')}
               name="password"
-              type="password"
               autoComplete="new-password"
               value={form.password}
               onChange={(e) => patch('password', e.target.value)}

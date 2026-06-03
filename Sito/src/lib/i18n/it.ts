@@ -774,7 +774,18 @@ export const translations: TranslationMap = {
   'admin.users.col.type': 'Tipo',
   'admin.users.col.email': 'Email',
   'admin.users.col.created': 'Creato',
-  'admin.users.openProfile': 'Apri profilo',
+  'admin.users.openProfile': 'Gestione account',
+  'admin.users.editData': 'Modifica dati',
+  'common.showPassword': 'Mostra password',
+  'common.hidePassword': 'Nascondi password',
+  'admin.users.loginHint.title': 'Accesso utente',
+  'admin.users.loginHint.body':
+    'L\u2019utente accede su /login con questa email e la password temporanea impostata alla creazione. Dopo il primo accesso pu\u00f2 completare nome e documenti in Il mio account.',
+  'admin.users.publicHint.title': 'Pagina pubblica (QR / NFC)',
+  'admin.users.publicHint.body':
+    'Nel modello attuale la pagina pubblica \u00e8 legata a un drone con visibilit\u00e0 Pubblico e uno slug. L\u2019utente la crea da Il mio account \u2192 Droni, oppure la gestisci dalla sezione Droni qui sotto.',
+  'admin.users.publicHint.none':
+    'Nessun drone pubblico ancora: crea un drone e imposta visibilit\u00e0 Pubblico per ottenere l\u2019URL /u/slug.',
   'admin.users.detail.account': 'Dati account',
   'admin.users.detail.pilot': 'Identità pilota',
   'admin.users.detail.slots': 'Slot',

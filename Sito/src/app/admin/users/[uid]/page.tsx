@@ -42,7 +42,7 @@ import {
   isActiveOperatorOverride,
   operatorDisplayName,
 } from '@/lib/utils/entities';
-import { formatDate, formatDateTime } from '@/lib/utils';
+import { formatDate, formatDateTime, getPublicProfileUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
@@ -179,6 +179,42 @@ export default function AdminUserDetailPage() {
         <h2 className="mt-2 text-xl font-semibold text-gray-900">{accountDisplayName(account)}</h2>
         <p className="mt-1 font-mono text-xs text-gray-500">{uid}</p>
       </div>
+
+      <Card padding="md" className="border-sky-100 bg-sky-50/50">
+        <h3 className="text-sm font-semibold text-sky-900">{t('admin.users.loginHint.title')}</h3>
+        <p className="mt-1.5 text-sm text-sky-900/90">{t('admin.users.loginHint.body')}</p>
+        <p className="mt-2 font-mono text-xs text-sky-800">
+          /login · {account.email || '—'}
+        </p>
+      </Card>
+
+      <Card padding="md" className="border-gray-200 bg-gray-50/60">
+        <h3 className="text-sm font-semibold text-gray-900">{t('admin.users.publicHint.title')}</h3>
+        <p className="mt-1.5 text-sm text-gray-600">{t('admin.users.publicHint.body')}</p>
+        {drones.some((d) => d.visibility === 'public' && d.slug.trim()) ? (
+          <ul className="mt-3 space-y-2">
+            {drones
+              .filter((d) => d.visibility === 'public' && d.slug.trim())
+              .map((d) => (
+                <li key={d.id} className="flex flex-wrap items-center gap-2 text-sm">
+                  <span className="font-medium text-gray-800">
+                    {[d.manufacturer, d.model].filter(Boolean).join(' ').trim() || d.slug}
+                  </span>
+                  <a
+                    href={getPublicProfileUrl(d.slug)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                  >
+                    {t('dashboard.viewPublicProfile')}
+                  </a>
+                </li>
+              ))}
+          </ul>
+        ) : (
+          <p className="mt-2 text-sm text-amber-800">{t('admin.users.publicHint.none')}</p>
+        )}
+      </Card>
 
       <AccountSection account={account} onSaved={reload} />
       {pilot ? <PilotSection pilot={pilot} onSaved={reload} /> : null}
@@ -569,7 +605,7 @@ function DronesSection({
                     {t('drone.field.defaultOperator')}: {op ? operatorDisplayName(op) : '—'}
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   {overrideActive ? (
                     <Button
                       variant="ghost"
@@ -579,6 +615,16 @@ function DronesSection({
                     >
                       {t('admin.drones.clearOverride')}
                     </Button>
+                  ) : null}
+                  {d.visibility === 'public' && d.slug.trim() ? (
+                    <a
+                      href={getPublicProfileUrl(d.slug)}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-md border border-sky-200 bg-sky-50 px-2.5 py-1 text-xs font-medium text-sky-800 transition hover:bg-sky-100"
+                    >
+                      {t('dashboard.viewPublicProfile')}
+                    </a>
                   ) : null}
                   <Button href={`/admin/drones/${d.id}`} variant="secondary" size="sm">
                     {t('common.edit')}
