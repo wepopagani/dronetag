@@ -809,6 +809,8 @@ export const translations = {
     'In the current model the public page is tied to a drone with Public visibility and a slug. The user creates it under My account → Drones, or you manage it in the Drones section below.',
   'admin.users.publicHint.none':
     'No public drone yet: create a drone and set visibility to Public to get the /u/slug URL.',
+  'admin.users.publicProfileUnavailable':
+    'No public page yet: add a drone with Public visibility and a slug (My account \u2192 Drones).',
   'admin.users.detail.account': 'Account fields',
   'admin.users.detail.pilot': 'Pilot identity',
   'admin.users.detail.slots': 'Slots',

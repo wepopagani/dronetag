@@ -786,6 +786,8 @@ export const translations: TranslationMap = {
     'Nel modello attuale la pagina pubblica \u00e8 legata a un drone con visibilit\u00e0 Pubblico e uno slug. L\u2019utente la crea da Il mio account \u2192 Droni, oppure la gestisci dalla sezione Droni qui sotto.',
   'admin.users.publicHint.none':
     'Nessun drone pubblico ancora: crea un drone e imposta visibilit\u00e0 Pubblico per ottenere l\u2019URL /u/slug.',
+  'admin.users.publicProfileUnavailable':
+    'Nessuna pagina pubblica: serve un drone con visibilit\u00e0 Pubblico e uno slug (Il mio account \u2192 Droni).',
   'admin.users.detail.account': 'Dati account',
   'admin.users.detail.pilot': 'Identità pilota',
   'admin.users.detail.slots': 'Slot',

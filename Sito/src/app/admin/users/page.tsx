@@ -163,7 +163,15 @@ export default function AdminUsersListPage() {
                         >
                           {t('dashboard.viewPublicProfile')}
                         </a>
-                      ) : null}
+                      ) : (
+                        <Link
+                          href={`/admin/users/${u.uid}#pagina-pubblica`}
+                          title={t('admin.users.publicProfileUnavailable')}
+                          className="rounded-md border border-gray-200 bg-gray-50 px-2.5 py-1.5 text-xs font-medium text-gray-400 transition hover:border-gray-300 hover:bg-gray-100 hover:text-gray-600"
+                        >
+                          {t('dashboard.viewPublicProfile')}
+                        </Link>
+                      )}
                     </div>
                   </td>
                 </tr>

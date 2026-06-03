@@ -782,6 +782,8 @@ export const translations: TranslationMap = {
     'The public page is tied to a public drone with a slug. Manage it in the Drones section below.',
   'admin.users.publicHint.none':
     'No public drone yet: create a drone and set visibility to Public.',
+  'admin.users.publicProfileUnavailable':
+    'No public page yet: add a public drone with a slug.',
   'admin.users.detail.account': 'Account fields',
   'admin.users.detail.pilot': 'Pilot identity',
   'admin.users.detail.slots': 'Slots',

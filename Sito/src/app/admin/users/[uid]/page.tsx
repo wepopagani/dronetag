@@ -188,7 +188,7 @@ export default function AdminUserDetailPage() {
         </p>
       </Card>
 
-      <Card padding="md" className="border-gray-200 bg-gray-50/60">
+      <Card id="pagina-pubblica" padding="md" className="border-gray-200 bg-gray-50/60 scroll-mt-24">
         <h3 className="text-sm font-semibold text-gray-900">{t('admin.users.publicHint.title')}</h3>
         <p className="mt-1.5 text-sm text-gray-600">{t('admin.users.publicHint.body')}</p>
         {drones.some((d) => d.visibility === 'public' && d.slug.trim()) ? (
@@ -212,7 +212,15 @@ export default function AdminUserDetailPage() {
               ))}
           </ul>
         ) : (
-          <p className="mt-2 text-sm text-amber-800">{t('admin.users.publicHint.none')}</p>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span
+              title={t('admin.users.publicProfileUnavailable')}
+              className="cursor-not-allowed rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-400"
+            >
+              {t('dashboard.viewPublicProfile')}
+            </span>
+            <p className="text-sm text-amber-800">{t('admin.users.publicHint.none')}</p>
+          </div>
         )}
       </Card>
 
