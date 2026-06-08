@@ -13,7 +13,7 @@ import {
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
-import { callCreateCertificate } from '@/lib/firebase/callable';
+import { adminFetch } from '@/lib/client/adminApi';
 import type { Certificate, CertificateKind } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
 
@@ -59,23 +59,31 @@ export async function getCertificate(id: string): Promise<Certificate | null> {
 }
 
 /**
- * Server-side create via `createCertificate` Cloud Function (PR-SEC-2).
+ * Server-side create via `/api/entities/certificates` (Admin SDK).
  * Quota-checked and verificationStatus is forced to 'unverified'.
  */
 export async function createCertificate(
   data: Omit<Certificate, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   if (DEMO_MODE) return demo.createCertificate(data);
-  const { id } = await callCreateCertificate({
-    kind: data.kind,
-    label: data.label,
-    issuedBy: data.issuedBy,
-    issuedAt: data.issuedAt,
-    expiresAt: data.expiresAt,
-    fileUrl: data.fileUrl,
-    notes: data.notes,
+  const res = await adminFetch('/api/entities/certificates', {
+    method: 'POST',
+    body: JSON.stringify({
+      kind: data.kind,
+      label: data.label,
+      issuedBy: data.issuedBy,
+      issuedAt: data.issuedAt,
+      expiresAt: data.expiresAt,
+      fileUrl: data.fileUrl,
+      notes: data.notes,
+    }),
   });
-  return id;
+  const body = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `create certificate failed (${res.status})`);
+  }
+  if (!body.id) throw new Error('create certificate failed: missing id');
+  return body.id;
 }
 
 export async function updateCertificate(id: string, patch: Partial<Certificate>): Promise<void> {

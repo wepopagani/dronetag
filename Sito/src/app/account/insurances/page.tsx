@@ -98,6 +98,7 @@ export default function AccountInsurancesPage() {
   const [creating, setCreating] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<Insurance | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const reload = useMemo(() => async () => {
     if (!user) return;
@@ -138,6 +139,7 @@ export default function AccountInsurancesPage() {
   async function handleSave(form: InsuranceFormState, target: Insurance | null) {
     if (!user) return;
     setSavingId(target?.id ?? 'new');
+    setSaveError(null);
     try {
       // Normalise: only the field matching `link` is meaningful; clear the other.
       const droneId = form.link === 'drone' ? (form.droneId || null) : null;
@@ -163,6 +165,9 @@ export default function AccountInsurancesPage() {
       await reload();
       setCreating(false);
       setEditing(null);
+    } catch (err) {
+      console.error('[insurances] save failed', err);
+      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
     } finally {
       setSavingId(null);
     }
@@ -191,6 +196,7 @@ export default function AccountInsurancesPage() {
       newLabel={t('insurance.list.new')}
       onNew={() => setCreating(true)}
     >
+      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
       {insurances.length === 0 ? (
         <EmptyState
           title={t('insurance.list.empty')}

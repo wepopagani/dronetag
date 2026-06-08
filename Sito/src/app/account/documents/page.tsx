@@ -89,6 +89,7 @@ export default function AccountDocumentsPage() {
   const [confirmingDelete, setConfirmingDelete] = useState<DocumentRef | null>(null);
   const [previewing, setPreviewing] = useState<DocumentRef | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const reload = useMemo(() => async () => {
     if (!user) return;
@@ -124,6 +125,7 @@ export default function AccountDocumentsPage() {
   async function handleSave(form: DocFormState, target: DocumentRef | null) {
     if (!user) return;
     setSavingId(target?.id ?? 'new');
+    setSaveError(null);
     try {
       const inferredMime = form.fileUrl.toLowerCase().endsWith('.pdf') ? 'application/pdf' : '';
       const payload = {
@@ -145,6 +147,9 @@ export default function AccountDocumentsPage() {
       await reload();
       setCreating(false);
       setEditing(null);
+    } catch (err) {
+      console.error('[documents] save failed', err);
+      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
     } finally {
       setSavingId(null);
     }
@@ -172,6 +177,7 @@ export default function AccountDocumentsPage() {
       onNew={() => setCreating(true)}
       newDisabled={atCap}
     >
+      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
       {documents.length === 0 ? (
         <EmptyState
           title={t('doc.list.empty')}

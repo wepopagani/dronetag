@@ -86,6 +86,7 @@ export default function AccountCertificatesPage() {
   const [creating, setCreating] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<Certificate | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const reload = useMemo(() => async () => {
     if (!user) return;
@@ -121,6 +122,7 @@ export default function AccountCertificatesPage() {
   async function handleSave(form: CertFormState, target: Certificate | null) {
     if (!user) return;
     setSavingId(target?.id ?? 'new');
+    setSaveError(null);
     try {
       const payload = {
         userId: user.uid,
@@ -141,6 +143,9 @@ export default function AccountCertificatesPage() {
       await reload();
       setCreating(false);
       setEditing(null);
+    } catch (err) {
+      console.error('[certificates] save failed', err);
+      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
     } finally {
       setSavingId(null);
     }
@@ -172,6 +177,7 @@ export default function AccountCertificatesPage() {
       onNew={() => setCreating(true)}
       newDisabled={atCap}
     >
+      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
       {certificates.length === 0 ? (
         <EmptyState
           title={t('cert.list.empty')}

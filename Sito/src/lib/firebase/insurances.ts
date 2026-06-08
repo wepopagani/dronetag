@@ -16,7 +16,7 @@ import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
 import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
-import { callCreateInsurance } from '@/lib/firebase/callable';
+import { adminFetch } from '@/lib/client/adminApi';
 import type { Insurance, InsuranceLink } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
 
@@ -66,7 +66,7 @@ export async function getInsurance(id: string): Promise<Insurance | null> {
 }
 
 /**
- * Server-side create via `createInsurance` Cloud Function (PR-SEC-2).
+ * Server-side create via `/api/entities/insurances` (Admin SDK).
  * Validates that the linked drone or operator belongs to the caller;
  * verificationStatus is forced to 'unverified'.
  */
@@ -74,18 +74,26 @@ export async function createInsurance(
   data: Omit<Insurance, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   if (DEMO_MODE) return demo.createInsurance(data);
-  const { id } = await callCreateInsurance({
-    link: data.link,
-    droneId: data.droneId,
-    operatorId: data.operatorId,
-    provider: data.provider,
-    policyNumber: data.policyNumber,
-    issueDate: data.issueDate,
-    expiryDate: data.expiryDate,
-    notes: data.notes,
-    pdfUrl: data.pdfUrl,
+  const res = await adminFetch('/api/entities/insurances', {
+    method: 'POST',
+    body: JSON.stringify({
+      link: data.link,
+      droneId: data.droneId,
+      operatorId: data.operatorId,
+      provider: data.provider,
+      policyNumber: data.policyNumber,
+      issueDate: data.issueDate,
+      expiryDate: data.expiryDate,
+      notes: data.notes,
+      pdfUrl: data.pdfUrl,
+    }),
   });
-  return id;
+  const body = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `create insurance failed (${res.status})`);
+  }
+  if (!body.id) throw new Error('create insurance failed: missing id');
+  return body.id;
 }
 
 export async function updateInsurance(id: string, patch: Partial<Insurance>): Promise<void> {

@@ -18,7 +18,7 @@ import {
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
-import { callCreateDocument } from '@/lib/firebase/callable';
+import { adminFetch } from '@/lib/client/adminApi';
 import type { DocumentRef, DocumentKind } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
 
@@ -65,7 +65,7 @@ export async function getDocument(id: string): Promise<DocumentRef | null> {
 }
 
 /**
- * Server-side create via `createDocument` Cloud Function (PR-SEC-2).
+ * Server-side create via `/api/entities/documents` (Admin SDK).
  * Quota-checked and content-type allowlisted; verificationStatus is
  * forced to 'unverified'.
  */
@@ -73,16 +73,24 @@ export async function createDocument(
   data: Omit<DocumentRef, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   if (DEMO_MODE) return demo.createDocument(data);
-  const { id } = await callCreateDocument({
-    kind: data.kind,
-    label: data.label,
-    fileUrl: data.fileUrl,
-    fileName: data.fileName,
-    fileSize: data.fileSize,
-    mimeType: data.mimeType,
-    notes: data.notes,
+  const res = await adminFetch('/api/entities/documents', {
+    method: 'POST',
+    body: JSON.stringify({
+      kind: data.kind,
+      label: data.label,
+      fileUrl: data.fileUrl,
+      fileName: data.fileName,
+      fileSize: data.fileSize,
+      mimeType: data.mimeType,
+      notes: data.notes,
+    }),
   });
-  return id;
+  const body = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `create document failed (${res.status})`);
+  }
+  if (!body.id) throw new Error('create document failed: missing id');
+  return body.id;
 }
 
 export async function updateDocument(id: string, patch: Partial<DocumentRef>): Promise<void> {
