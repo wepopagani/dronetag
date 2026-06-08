@@ -32,7 +32,7 @@ import {
   deleteDronePublicBySlug,
   syncDronePublicSnapshot,
 } from '@/lib/firebase/dronesPublic';
-import { callCreateDrone } from '@/lib/firebase/callable';
+import { adminFetch } from '@/lib/client/adminApi';
 import type {
   Drone,
   DroneClass,
@@ -156,10 +156,8 @@ async function findFreeSlug(preferred?: string): Promise<string> {
 // ─── Writes ─────────────────────────────────────────────────────────────────
 
 /**
- * Server-side create via the `createDrone` Cloud Function (PR-SEC-2).
- * The function mints a unique slug, validates ownership of the chosen
- * default operator + insurance, enforces drone-slot quota, and writes
- * audit fields. DEMO_MODE keeps the legacy in-memory path.
+ * Server-side create via `/api/entities/drones` (Admin SDK).
+ * Mints a unique slug, validates operator ownership, enforces quota.
  */
 export async function createDrone(
   data: Omit<Drone, 'id' | 'slug' | 'createdAt' | 'updatedAt'> & { slug?: string },
@@ -172,21 +170,32 @@ export async function createDrone(
     return { id, slug };
   }
   await awaitFirebaseAuthReady();
-  const result = await callCreateDrone({
-    manufacturer: data.manufacturer,
-    model: data.model,
-    classMarking: data.classMarking,
-    droneSerialNumber: data.droneSerialNumber,
-    controllerSerialNumber: data.controllerSerialNumber,
-    defaultOperatorId: data.defaultOperatorId,
-    insuranceId: data.insuranceId,
-    status: data.status,
-    visibility: data.visibility,
+  const res = await adminFetch('/api/entities/drones', {
+    method: 'POST',
+    body: JSON.stringify({
+      manufacturer: data.manufacturer,
+      model: data.model,
+      classMarking: data.classMarking,
+      droneSerialNumber: data.droneSerialNumber,
+      controllerSerialNumber: data.controllerSerialNumber,
+      defaultOperatorId: data.defaultOperatorId,
+      insuranceId: data.insuranceId,
+      status: data.status,
+      visibility: data.visibility,
+    }),
   });
-  // The function returns the freshly-minted drone id + slug. We sync the
-  // public snapshot from the client because the function doesn't fan out
-  // to dronesPublic itself (V-001 closure relies on snapshot writes that
-  // still go through the owner's auth context).
+  const body = (await res.json().catch(() => ({}))) as {
+    id?: string;
+    slug?: string;
+    error?: string;
+  };
+  if (!res.ok) {
+    throw new Error(body.error || `create drone failed (${res.status})`);
+  }
+  if (!body.id || !body.slug) {
+    throw new Error('create drone failed: missing id or slug');
+  }
+  const result = { id: body.id, slug: body.slug };
   const fresh = await getDrone(result.id);
   if (fresh) await syncDronePublicSnapshot(fresh);
   return result;

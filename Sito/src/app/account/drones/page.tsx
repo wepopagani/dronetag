@@ -74,6 +74,7 @@ export default function AccountDronesPage() {
   const [creating, setCreating] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<Drone | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const reload = useMemo(() => async () => {
     if (!user) return;
@@ -116,6 +117,7 @@ export default function AccountDronesPage() {
   async function handleCreate(form: CreateFormState) {
     if (!user) return;
     setSavingId('new');
+    setSaveError(null);
     try {
       const { id } = await createDrone({
         userId: user.uid,
@@ -141,6 +143,9 @@ export default function AccountDronesPage() {
       trackEvent('drone_created', { classMarking: form.classMarking });
       setCreating(false);
       router.push(`/account/drones/${id}`);
+    } catch (err) {
+      console.error('[drones] create failed', err);
+      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
     } finally {
       setSavingId(null);
     }
@@ -167,6 +172,7 @@ export default function AccountDronesPage() {
       onNew={() => setCreating(true)}
       newDisabled={atCap || noOperators}
     >
+      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
       {noOperators && drones.length === 0 ? (
         <EmptyState
           title={t('drone.list.empty')}
