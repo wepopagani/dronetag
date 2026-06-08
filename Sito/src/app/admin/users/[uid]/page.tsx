@@ -188,7 +188,8 @@ export default function AdminUserDetailPage() {
         </p>
       </Card>
 
-      <Card id="pagina-pubblica" padding="md" className="border-gray-200 bg-gray-50/60 scroll-mt-24">
+      <div id="pagina-pubblica" className="scroll-mt-24">
+      <Card padding="md" className="border-gray-200 bg-gray-50/60">
         <h3 className="text-sm font-semibold text-gray-900">{t('admin.users.publicHint.title')}</h3>
         <p className="mt-1.5 text-sm text-gray-600">{t('admin.users.publicHint.body')}</p>
         {drones.some((d) => d.visibility === 'public' && d.slug.trim()) ? (
@@ -223,6 +224,7 @@ export default function AdminUserDetailPage() {
           </div>
         )}
       </Card>
+      </div>
 
       <AccountSection account={account} onSaved={reload} />
       {pilot ? <PilotSection pilot={pilot} onSaved={reload} /> : null}

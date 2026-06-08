@@ -4,31 +4,7 @@
 
 import { NextResponse } from 'next/server';
 import { adminAuth, isFirebaseAdminConfigured } from '@/lib/server/firebaseAdmin';
-
-const ID_TOKEN_COOKIE = '__dronetag_idt';
-const SESSION_COOKIE = '__dronetag_session';
-
-function readCookie(header: string | null, name: string): string | null {
-  if (!header) return null;
-  const prefix = `${name}=`;
-  for (const part of header.split(';')) {
-    const trimmed = part.trim();
-    if (trimmed.startsWith(prefix)) {
-      return decodeURIComponent(trimmed.slice(prefix.length));
-    }
-  }
-  return null;
-}
-
-function tokenFromRequest(request: Request): string | null {
-  const auth = request.headers.get('authorization');
-  if (auth?.startsWith('Bearer ')) {
-    const t = auth.slice(7).trim();
-    if (t) return t;
-  }
-  const cookie = request.headers.get('cookie');
-  return readCookie(cookie, SESSION_COOKIE) ?? readCookie(cookie, ID_TOKEN_COOKIE);
-}
+import { tokenFromRequest } from '@/lib/server/requestAuth';
 
 export type VerifiedAdmin = {
   uid: string;

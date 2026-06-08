@@ -95,6 +95,7 @@ export default function AccountOperatorsPage() {
   const [creating, setCreating] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<Operator | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const reload = useMemo(() => async () => {
     if (!user) return;
@@ -135,6 +136,7 @@ export default function AccountOperatorsPage() {
   async function handleSave(form: OperatorFormState, target: Operator | null) {
     if (!user) return;
     setSavingId(target?.id ?? 'new');
+    setSaveError(null);
     try {
       // If this operator is being marked default, demote any previous default.
       if (form.isDefault) {
@@ -151,6 +153,9 @@ export default function AccountOperatorsPage() {
       await reload();
       setCreating(false);
       setEditing(null);
+    } catch (err) {
+      console.error('[operators] save failed', err);
+      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
     } finally {
       setSavingId(null);
     }
@@ -187,6 +192,7 @@ export default function AccountOperatorsPage() {
       onNew={() => setCreating(true)}
       newDisabled={atCap}
     >
+      <FormErrorBanner show={Boolean(saveError)} message={saveError ?? undefined} />
       {operators.length === 0 ? (
         <EmptyState
           title={t('operator.list.empty')}

@@ -17,7 +17,7 @@ import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
 import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
-import { callCreateOperator } from '@/lib/firebase/callable';
+import { adminFetch } from '@/lib/client/adminApi';
 import {
   EMPTY_OPERATOR_COMPANY,
   EMPTY_OPERATOR_PRIVATE,
@@ -72,22 +72,29 @@ export async function getOperator(id: string): Promise<Operator | null> {
 }
 
 /**
- * Server-side create via the `createOperator` Cloud Function (PR-SEC-2).
- * The function enforces ownership, kind validation, and the 3-operator
- * quota cap. In DEMO_MODE we short-circuit to the in-memory store.
+ * Server-side create via `/api/entities/operators` (Admin SDK).
+ * Enforces ownership, kind validation, and the operator quota cap.
  */
 export async function createOperator(
   data: Omit<Operator, 'id' | 'createdAt' | 'updatedAt'>,
 ): Promise<string> {
   if (DEMO_MODE) return demo.createOperator(data);
-  const { id } = await callCreateOperator({
-    kind: data.kind,
-    label: data.label,
-    isDefault: data.isDefault,
-    private: data.private as unknown as Record<string, unknown>,
-    company: data.company as unknown as Record<string, unknown>,
+  const res = await adminFetch('/api/entities/operators', {
+    method: 'POST',
+    body: JSON.stringify({
+      kind: data.kind,
+      label: data.label,
+      isDefault: data.isDefault,
+      private: data.private,
+      company: data.company,
+    }),
   });
-  return id;
+  const body = (await res.json().catch(() => ({}))) as { id?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `create operator failed (${res.status})`);
+  }
+  if (!body.id) throw new Error('create operator failed: missing id');
+  return body.id;
 }
 
 export async function updateOperator(id: string, patch: Partial<Operator>): Promise<void> {
