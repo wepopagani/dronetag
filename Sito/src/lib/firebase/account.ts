@@ -42,6 +42,9 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
     companyContactPerson: str('companyContactPerson'),
     companyVat: str('companyVat'),
     companyUniqueNumber: str('companyUniqueNumber'),
+    profilePhotoUrl: str('profilePhotoUrl'),
+    logoUrl: str('logoUrl'),
+    bannerUrl: str('bannerUrl'),
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
   };
@@ -90,6 +93,9 @@ export async function ensureAccount(
     companyContactPerson: seed.companyContactPerson ?? '',
     companyVat: seed.companyVat ?? '',
     companyUniqueNumber: seed.companyUniqueNumber ?? '',
+    profilePhotoUrl: seed.profilePhotoUrl ?? '',
+    logoUrl: seed.logoUrl ?? '',
+    bannerUrl: seed.bannerUrl ?? '',
     createdAt: now,
     updatedAt: now,
   };
@@ -108,6 +114,45 @@ export async function updateAccount(uid: string, patch: Partial<UserAccount>): P
     Object.entries(patch).filter(([k, v]) => k !== 'uid' && v !== undefined),
   );
   await updateDoc(doc(db, USERS, uid), { ...payload, updatedAt: new Date().toISOString() });
+}
+
+export type AccountBrandingKind = 'photo' | 'logo' | 'banner';
+
+/** Upload account branding image via Admin SDK (avoids client Storage rules). */
+export async function uploadAccountBranding(
+  kind: AccountBrandingKind,
+  file: File,
+): Promise<string> {
+  if (DEMO_MODE) {
+    await new Promise((r) => setTimeout(r, 300));
+    return URL.createObjectURL(file);
+  }
+
+  const form = new FormData();
+  form.append('kind', kind);
+  form.append('file', file);
+  const res = await adminFetch('/api/account/branding', {
+    method: 'POST',
+    body: form,
+  });
+  const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `upload ${kind} failed (${res.status})`);
+  }
+  if (!body.url) throw new Error(`upload ${kind} failed: missing url`);
+  return body.url;
+}
+
+export async function uploadAccountProfilePhoto(_uid: string, file: File): Promise<string> {
+  return uploadAccountBranding('photo', file);
+}
+
+export async function uploadAccountLogo(_uid: string, file: File): Promise<string> {
+  return uploadAccountBranding('logo', file);
+}
+
+export async function uploadAccountBanner(_uid: string, file: File): Promise<string> {
+  return uploadAccountBranding('banner', file);
 }
 
 /**

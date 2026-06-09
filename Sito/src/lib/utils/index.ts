@@ -78,6 +78,23 @@ export function computePolicyStatus(ins: Insurance): PolicyStatus {
   return 'valid';
 }
 
+/** Certificate validity from expiry date (no expiry = valid if issued). */
+export function computeCertificateStatus(cert: {
+  issuedAt: string;
+  expiresAt: string;
+}): PolicyStatus {
+  if (!cert.issuedAt && !cert.expiresAt) return 'missing';
+  if (!cert.expiresAt) return 'valid';
+
+  const now = new Date();
+  const expiry = new Date(cert.expiresAt);
+  if (expiry < now) return 'expired';
+
+  const daysLeft = Math.ceil((expiry.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+  if (daysLeft <= EXPIRING_THRESHOLD_DAYS) return 'expiring';
+  return 'valid';
+}
+
 export function daysUntilExpiry(dateIso: string): number | null {
   if (!dateIso) return null;
   const now = new Date();

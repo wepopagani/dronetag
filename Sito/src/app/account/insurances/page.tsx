@@ -11,7 +11,7 @@
  *   that the public profile will lose its insurance status.
  */
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -20,26 +20,28 @@ import {
   deleteInsurance,
   listInsurances,
   updateInsurance,
+  uploadInsurancePolicyPdf,
 } from '@/lib/firebase/insurances';
 import { listDronesByUser, updateDrone } from '@/lib/firebase/drones';
 import { listOperators } from '@/lib/firebase/operators';
+import { extractTextFromPdf } from '@/lib/insurance/extractPdfText';
+import { parsePolicyPdfText, matchDroneFromPolicySpecs } from '@/lib/insurance/parsePolicyPdf';
 import type {
   Drone,
   Insurance,
   InsuranceLink,
   Operator,
 } from '@/lib/types/entities';
-import { computePolicyStatus, formatDate } from '@/lib/utils';
+import { computePolicyStatus, describePolicyStatus, formatDate } from '@/lib/utils';
 import { operatorDisplayName } from '@/lib/utils/entities';
-import { isAllowedFileUrl } from '@/lib/utils/urlAllowlist';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
-import { Textarea } from '@/components/ui/Textarea';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { PolicyStatusBadge } from '@/components/ui/StatusBadge';
+import { UploadField } from '@/components/ui/UploadField';
+import { PolicyStatusBadge, PolicyStatusDetail } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
@@ -50,9 +52,9 @@ interface InsuranceFormState {
   operatorId: string;
   provider: string;
   policyNumber: string;
+  holderName: string;
   issueDate: string;
   expiryDate: string;
-  notes: string;
   pdfUrl: string;
 }
 
@@ -62,9 +64,9 @@ const EMPTY_FORM: InsuranceFormState = {
   operatorId: '',
   provider: '',
   policyNumber: '',
+  holderName: '',
   issueDate: '',
   expiryDate: '',
-  notes: '',
   pdfUrl: '',
 };
 
@@ -75,16 +77,32 @@ function insuranceToForm(i: Insurance): InsuranceFormState {
     operatorId: i.operatorId ?? '',
     provider: i.provider,
     policyNumber: i.policyNumber,
+    holderName: i.holderName,
     issueDate: i.issueDate,
     expiryDate: i.expiryDate,
-    notes: i.notes,
     pdfUrl: i.pdfUrl,
   };
 }
 
-// V-019: URL_RX kept as a defensive sanity check, but the real
-// validation is `isAllowedFileUrl` (host allowlist, https-only).
-const URL_RX = /^https?:\/\/.+$/i;
+function formToInsurancePreview(form: InsuranceFormState): Insurance {
+  return {
+    id: 'preview',
+    userId: '',
+    link: form.link,
+    droneId: form.droneId || null,
+    operatorId: form.operatorId || null,
+    provider: form.provider,
+    policyNumber: form.policyNumber,
+    holderName: form.holderName,
+    issueDate: form.issueDate,
+    expiryDate: form.expiryDate,
+    notes: '',
+    pdfUrl: form.pdfUrl,
+    verificationStatus: 'unverified',
+    createdAt: '',
+    updatedAt: '',
+  };
+}
 
 export default function AccountInsurancesPage() {
   const { user } = useAuth();
@@ -136,12 +154,15 @@ export default function AccountInsurancesPage() {
     );
   }
 
-  async function handleSave(form: InsuranceFormState, target: Insurance | null) {
+  async function handleSave(
+    form: InsuranceFormState,
+    target: Insurance | null,
+    pendingPdf: File | null,
+  ) {
     if (!user) return;
     setSavingId(target?.id ?? 'new');
     setSaveError(null);
     try {
-      // Normalise: only the field matching `link` is meaningful; clear the other.
       const droneId = form.link === 'drone' ? (form.droneId || null) : null;
       const operatorId = form.link === 'operator' ? (form.operatorId || null) : null;
       const payload = {
@@ -151,17 +172,25 @@ export default function AccountInsurancesPage() {
         operatorId,
         provider: form.provider,
         policyNumber: form.policyNumber,
+        holderName: form.holderName,
         issueDate: form.issueDate,
         expiryDate: form.expiryDate,
-        notes: form.notes,
-        pdfUrl: form.pdfUrl,
+        notes: target?.notes ?? '',
+        pdfUrl: pendingPdf ? '' : form.pdfUrl,
         verificationStatus: target?.verificationStatus ?? 'unverified',
       } as const;
+
+      let insuranceId = target?.id;
       if (target) {
         await updateInsurance(target.id, payload);
       } else {
-        await createInsurance(payload);
+        insuranceId = await createInsurance(payload);
       }
+
+      if (pendingPdf && insuranceId) {
+        await uploadInsurancePolicyPdf(insuranceId, pendingPdf);
+      }
+
       await reload();
       setCreating(false);
       setEditing(null);
@@ -234,7 +263,7 @@ export default function AccountInsurancesPage() {
           operators={operators}
           saving={savingId === (editing?.id ?? 'new')}
           onClose={() => { setCreating(false); setEditing(null); }}
-          onSubmit={(form) => handleSave(form, editing)}
+          onSubmit={(form, pendingPdf) => handleSave(form, editing, pendingPdf)}
         />
       ) : null}
 
@@ -292,12 +321,23 @@ function InsuranceRow({
               <PolicyStatusBadge status={status} />
             </div>
             <p className="mt-1 font-mono text-xs text-gray-600">{insurance.policyNumber || '—'}</p>
+            {insurance.holderName ? (
+              <p className="mt-1 text-xs text-gray-600">{insurance.holderName}</p>
+            ) : null}
             <p className="mt-1 text-xs text-gray-500">
               {t('insurance.field.link')}: <strong>{t(`insurance.link.${insurance.link}`)}</strong>
               {linkedLabel ? <> · {linkedLabel}</> : null}
             </p>
             <p className="mt-1 text-xs text-gray-500">
-              {t('profile.validUntil')}: {insurance.expiryDate ? formatDate(insurance.expiryDate) : '—'}
+              {insurance.issueDate && insurance.expiryDate ? (
+                <>
+                  {t('insurance.field.validity')}: {formatDate(insurance.issueDate)} – {formatDate(insurance.expiryDate)}
+                </>
+              ) : (
+                <>
+                  {t('profile.validUntil')}: {insurance.expiryDate ? formatDate(insurance.expiryDate) : '—'}
+                </>
+              )}
             </p>
             {publicUsage > 0 ? (
               <p className="mt-1 text-xs text-amber-700">
@@ -332,17 +372,98 @@ function InsuranceFormModal({
   operators: Operator[];
   saving: boolean;
   onClose: () => void;
-  onSubmit: (form: InsuranceFormState) => void;
+  onSubmit: (form: InsuranceFormState, pendingPdf: File | null) => void;
 }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<InsuranceFormState>(() =>
     target ? insuranceToForm(target) : EMPTY_FORM,
   );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [pendingPdf, setPendingPdf] = useState<File | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>(() => form.pdfUrl);
+  const [parsing, setParsing] = useState(false);
+  const [parseMessage, setParseMessage] = useState<string | null>(null);
+  const [detectedDrone, setDetectedDrone] = useState<{
+    manufacturer: string;
+    model: string;
+    registrationMark: string;
+    matchedDroneId: string | null;
+  } | null>(null);
+  const blobUrlRef = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+  }, []);
 
   function setField<K extends keyof InsuranceFormState>(k: K, v: InsuranceFormState[K]) {
     setForm((p) => ({ ...p, [k]: v }));
     if (errors[k as string]) setErrors((e) => ({ ...e, [k]: undefined }));
+  }
+
+  async function handlePdfUpload(file: File) {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    const blobUrl = URL.createObjectURL(file);
+    blobUrlRef.current = blobUrl;
+    setPendingPdf(file);
+    setPdfPreviewUrl(blobUrl);
+    setParseMessage(null);
+    setDetectedDrone(null);
+    setParsing(true);
+
+    try {
+      const text = await extractTextFromPdf(file);
+      const parsed = parsePolicyPdfText(text);
+      const matchedDroneId = matchDroneFromPolicySpecs(
+        drones,
+        parsed.droneManufacturer,
+        parsed.droneModel,
+      );
+
+      if (parsed.droneManufacturer || parsed.droneModel) {
+        setDetectedDrone({
+          manufacturer: parsed.droneManufacturer,
+          model: parsed.droneModel,
+          registrationMark: parsed.droneRegistrationMark,
+          matchedDroneId,
+        });
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        link: parsed.droneManufacturer || parsed.droneModel ? 'drone' : prev.link,
+        droneId: matchedDroneId || prev.droneId,
+        holderName: parsed.holderName || prev.holderName,
+        provider: parsed.provider || prev.provider,
+        policyNumber: parsed.policyNumber || prev.policyNumber,
+        issueDate: parsed.issueDate || prev.issueDate,
+        expiryDate: parsed.expiryDate || prev.expiryDate,
+      }));
+      if (parsed.partial) {
+        setParseMessage(t('insurance.parse.partial'));
+      } else if (parsed.provider || parsed.policyNumber || parsed.expiryDate) {
+        setParseMessage(t('insurance.parse.success'));
+      } else {
+        setParseMessage(t('insurance.parse.failed'));
+      }
+    } catch {
+      setParseMessage(t('insurance.parse.failed'));
+    } finally {
+      setParsing(false);
+    }
+  }
+
+  function handlePdfRemove() {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    setPendingPdf(null);
+    setPdfPreviewUrl(target?.pdfUrl ?? '');
+    setParseMessage(null);
+    setDetectedDrone(null);
   }
 
   function validate(): Record<string, string> {
@@ -352,13 +473,6 @@ function InsuranceFormModal({
     if (form.expiryDate && form.issueDate && form.expiryDate < form.issueDate) {
       e.expiryDate = t('form.errors.expiryBeforeIssue');
     }
-    if (form.pdfUrl) {
-      if (!URL_RX.test(form.pdfUrl)) {
-        e.pdfUrl = t('form.errors.invalidUrl');
-      } else if (!isAllowedFileUrl(form.pdfUrl)) {
-        e.pdfUrl = t('form.errors.urlNotAllowed');
-      }
-    }
     return e;
   }
 
@@ -367,8 +481,11 @@ function InsuranceFormModal({
     const v = validate();
     setErrors(v);
     if (Object.keys(v).length > 0) return;
-    onSubmit(form);
+    onSubmit(form, pendingPdf);
   }
+
+  const previewInsurance = formToInsurancePreview(form);
+  const policySummary = describePolicyStatus(previewInsurance);
 
   return (
     <Modal
@@ -378,6 +495,67 @@ function InsuranceFormModal({
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <FormErrorBanner show={Object.keys(errors).length > 0} />
+
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <UploadField
+            label={t('field.policyPdf')}
+            accept=".pdf,application/pdf"
+            currentUrl={pdfPreviewUrl || undefined}
+            onUpload={handlePdfUpload}
+            onRemove={pdfPreviewUrl ? handlePdfRemove : undefined}
+            preview
+            className="mb-0"
+          />
+          {parsing ? (
+            <p className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+              <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+              {t('insurance.parse.parsing')}
+            </p>
+          ) : null}
+          {parseMessage ? (
+            <p className="mt-2 text-xs text-blue-700">{parseMessage}</p>
+          ) : null}
+          <p className="mt-2 text-[11px] text-gray-400">{t('insurance.parse.hint')}</p>
+        </div>
+
+        {(form.provider || form.policyNumber || form.expiryDate) ? (
+          <div className="flex flex-wrap items-start justify-between gap-3 rounded-lg border border-gray-200 px-4 py-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-gray-900">
+                {form.provider || t('common.notAvailable')}
+              </p>
+              {form.holderName ? (
+                <p className="mt-0.5 text-xs text-gray-600">{form.holderName}</p>
+              ) : null}
+              {form.policyNumber ? (
+                <p className="mt-0.5 font-mono text-xs text-gray-600">{form.policyNumber}</p>
+              ) : null}
+              {form.issueDate && form.expiryDate ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  {formatDate(form.issueDate)} – {formatDate(form.expiryDate)}
+                </p>
+              ) : form.expiryDate ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  {t('profile.validUntil')}: {formatDate(form.expiryDate)}
+                </p>
+              ) : null}
+              {detectedDrone ? (
+                <p className="mt-1 text-xs text-gray-500">
+                  {t('insurance.parse.droneDetected')}:{' '}
+                  <strong>
+                    {[detectedDrone.manufacturer, detectedDrone.model].filter(Boolean).join(' ')}
+                  </strong>
+                  {detectedDrone.matchedDroneId ? (
+                    <span className="text-emerald-700"> · {t('insurance.parse.droneMatched')}</span>
+                  ) : (
+                    <span className="text-amber-700"> · {t('insurance.parse.droneNotMatched')}</span>
+                  )}
+                </p>
+              ) : null}
+            </div>
+            <PolicyStatusDetail summary={policySummary} />
+          </div>
+        ) : null}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Select
@@ -420,6 +598,12 @@ function InsuranceFormModal({
             />
           )}
           <Input
+            label={t('field.holderName')} name="holderName"
+            value={form.holderName}
+            onChange={(e) => setField('holderName', e.target.value)}
+            className="sm:col-span-2"
+          />
+          <Input
             label={t('field.insuranceProvider')} name="provider" required
             value={form.provider}
             onChange={(e) => setField('provider', e.target.value)}
@@ -441,19 +625,6 @@ function InsuranceFormModal({
             value={form.expiryDate}
             onChange={(e) => setField('expiryDate', e.target.value)}
             error={errors.expiryDate}
-          />
-          <Input
-            label={t('field.policyPdf')} name="pdfUrl"
-            value={form.pdfUrl}
-            onChange={(e) => setField('pdfUrl', e.target.value)}
-            error={errors.pdfUrl}
-            className="sm:col-span-2"
-          />
-          <Textarea
-            label={t('field.insuranceNotes')} name="notes"
-            value={form.notes}
-            onChange={(e) => setField('notes', e.target.value)}
-            className="sm:col-span-2"
           />
         </div>
 

@@ -34,6 +34,7 @@ function insuranceFromRaw(id: string, raw: Record<string, unknown>): Insurance {
     operatorId: optStr('operatorId'),
     provider: str('provider'),
     policyNumber: str('policyNumber'),
+    holderName: str('holderName'),
     issueDate: str('issueDate'),
     expiryDate: str('expiryDate'),
     notes: str('notes'),
@@ -82,6 +83,7 @@ export async function createInsurance(
       operatorId: data.operatorId,
       provider: data.provider,
       policyNumber: data.policyNumber,
+      holderName: data.holderName,
       issueDate: data.issueDate,
       expiryDate: data.expiryDate,
       notes: data.notes,
@@ -94,6 +96,28 @@ export async function createInsurance(
   }
   if (!body.id) throw new Error('create insurance failed: missing id');
   return body.id;
+}
+
+/** Upload policy PDF via Admin SDK (avoids client Storage rules). */
+export async function uploadInsurancePolicyPdf(insuranceId: string, file: File): Promise<string> {
+  if (DEMO_MODE) {
+    await new Promise((r) => setTimeout(r, 300));
+    return URL.createObjectURL(file);
+  }
+  const before = await getInsurance(insuranceId);
+  const form = new FormData();
+  form.append('file', file);
+  const res = await adminFetch(`/api/entities/insurances/${insuranceId}/pdf`, {
+    method: 'POST',
+    body: form,
+  });
+  const body = (await res.json().catch(() => ({}))) as { pdfUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `upload policy pdf failed (${res.status})`);
+  }
+  if (!body.pdfUrl) throw new Error('upload policy pdf failed: missing pdfUrl');
+  if (before?.userId) await resyncUserPublicDrones(before.userId);
+  return body.pdfUrl;
 }
 
 export async function updateInsurance(id: string, patch: Partial<Insurance>): Promise<void> {

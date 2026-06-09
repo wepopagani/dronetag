@@ -80,6 +80,17 @@ function holderRoleKey(kind: DronePublicSnapshot['holderKind']): string {
   }
 }
 
+function holderInitials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return `${parts[0][0] ?? ''}${parts[parts.length - 1][0] ?? ''}`.toUpperCase();
+}
+
+function hasUrl(value: string | undefined): value is string {
+  return Boolean(value?.trim());
+}
+
 function insuranceBannerKey(status: PolicyStatus): string {
   switch (status) {
     case 'valid':
@@ -123,25 +134,74 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-      {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div className="relative h-32 w-full overflow-hidden bg-gradient-to-br from-slate-800 via-slate-900 to-gray-950 sm:h-36">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_rgba(255,255,255,0.08),_transparent_60%)]" />
-        <div className="relative z-10 flex h-full flex-col justify-end px-5 pb-4 sm:px-6">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60">
-            {t('publicDrone.eyebrow')}
-          </p>
-          <h1 className="mt-1 text-xl font-bold tracking-tight text-white sm:text-2xl">
-            {[snapshot.manufacturer, snapshot.model].filter(Boolean).join(' ').trim() ||
-              t('common.notAvailable')}
-          </h1>
-          <p className="mt-1 text-xs text-white/70">
-            {t(holderRoleKey(snapshot.holderKind))}: <strong>{snapshot.holderDisplayName}</strong>
-          </p>
+      {/* ── Header + account branding ──────────────────────────────────── */}
+      <div className="relative">
+        <div className="relative h-36 w-full overflow-hidden sm:h-44">
+          {hasUrl(snapshot.bannerUrl) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={snapshot.bannerUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full bg-gradient-to-br from-slate-800 via-slate-900 to-gray-950" aria-hidden />
+          )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" aria-hidden />
+
+          {hasUrl(snapshot.logoUrl) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={snapshot.logoUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:h-12 sm:w-12"
+            />
+          ) : null}
+
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-5 pb-4 sm:px-6">
+            <div className="min-w-0">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60">
+                {t('publicDrone.eyebrow')}
+              </p>
+              <h1 className="mt-1 text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl">
+                {[snapshot.manufacturer, snapshot.model].filter(Boolean).join(' ').trim() ||
+                  t('common.notAvailable')}
+              </h1>
+              <p className="mt-1 text-xs text-white/80">
+                {t(holderRoleKey(snapshot.holderKind))}:{' '}
+                <strong>{snapshot.holderDisplayName}</strong>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute -bottom-10 left-5 z-10 sm:left-6">
+          {hasUrl(snapshot.profilePhotoUrl) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={snapshot.profilePhotoUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="h-20 w-20 rounded-xl border-[3px] border-white bg-white object-cover shadow-lg"
+            />
+          ) : (
+            <div
+              className="flex h-20 w-20 items-center justify-center rounded-xl border-[3px] border-white bg-slate-800 text-lg font-bold tracking-wide text-white shadow-lg"
+              aria-hidden
+            >
+              {holderInitials(snapshot.holderDisplayName)}
+            </div>
+          )}
         </div>
       </div>
 
       {/* ── Status row ─ outdoors-readable badges (STAGING-OPS-1) ─────── */}
-      <div className="flex flex-wrap items-center gap-2 px-5 py-3 sm:px-6">
+      <div className="flex flex-wrap items-center gap-2 px-5 pb-3 pl-28 pt-3 sm:px-6 sm:pl-[7.5rem]">
         <span
           className={classNames(
             'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset',

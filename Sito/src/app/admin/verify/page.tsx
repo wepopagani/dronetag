@@ -203,7 +203,10 @@ export default function AdminVerifyPage() {
                   <Card padding="md">
                     <div className="flex flex-wrap items-start justify-between gap-3">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-900">{c.label || kindLabel}</p>
+                        <p className="font-medium text-gray-900">{kindLabel}</p>
+                        {c.registrationNumber ? (
+                          <p className="mt-0.5 font-mono text-xs text-gray-700">{c.registrationNumber}</p>
+                        ) : null}
                         <p className="mt-0.5 text-xs text-gray-500">
                           {kindLabel}{' · '}
                           {owner ? (

@@ -34,6 +34,7 @@ import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
 import { getInsurance } from '@/lib/firebase/insurances';
+import { getAccount } from '@/lib/firebase/account';
 import { getOperator } from '@/lib/firebase/operators';
 import { getPilot } from '@/lib/firebase/pilots';
 import { listDronesByUser } from '@/lib/firebase/drones';
@@ -44,6 +45,7 @@ import type {
   Operator,
   Pilot,
 } from '@/lib/types/entities';
+import type { AccountBranding } from '@/lib/types/account';
 import type { PolicyStatus, VerificationStatus } from '@/lib/types';
 import {
   effectiveOperatorId,
@@ -84,6 +86,9 @@ function snapshotFromRaw(slug: string, raw: Record<string, unknown>): DronePubli
     insuranceValidUntil: str('insuranceValidUntil'),
     insuranceMaskedPolicyNumber: str('insuranceMaskedPolicyNumber'),
     insurancePdfUrl: str('insurancePdfUrl'),
+    profilePhotoUrl: str('profilePhotoUrl'),
+    logoUrl: str('logoUrl'),
+    bannerUrl: str('bannerUrl'),
     updatedAt: str('updatedAt'),
   };
 }
@@ -148,6 +153,7 @@ export function projectSnapshot(
   effectiveOperator: Operator | null,
   pilot: Pilot | null,
   insurance: Insurance | null,
+  branding: AccountBranding = { profilePhotoUrl: '', logoUrl: '', bannerUrl: '' },
 ): DronePublicSnapshot {
   let holderKind: DronePublicSnapshot['holderKind'] = 'pilot';
   let holderDisplayName = '—';
@@ -180,6 +186,9 @@ export function projectSnapshot(
       ? maskPolicyNumber(insurance.policyNumber)
       : '',
     insurancePdfUrl: insurance?.pdfUrl ?? '',
+    profilePhotoUrl: branding.profilePhotoUrl,
+    logoUrl: branding.logoUrl,
+    bannerUrl: branding.bannerUrl,
     updatedAt: new Date().toISOString(),
   };
 }
@@ -204,12 +213,20 @@ export async function syncDronePublicSnapshot(drone: Drone): Promise<void> {
       return;
     }
     const effId = effectiveOperatorId(drone);
-    const [op, pilot, insurance] = await Promise.all([
+    const [op, pilot, insurance, account] = await Promise.all([
       effId ? getOperator(effId) : Promise.resolve<Operator | null>(null),
       drone.linkedPilotId ? getPilot(drone.linkedPilotId) : Promise.resolve<Pilot | null>(null),
       drone.insuranceId ? getInsurance(drone.insuranceId) : Promise.resolve<Insurance | null>(null),
+      getAccount(drone.userId),
     ]);
-    const snapshot = projectSnapshot(drone, op, pilot, insurance);
+    const branding = account
+      ? {
+          profilePhotoUrl: account.profilePhotoUrl,
+          logoUrl: account.logoUrl,
+          bannerUrl: account.bannerUrl,
+        }
+      : { profilePhotoUrl: '', logoUrl: '', bannerUrl: '' };
+    const snapshot = projectSnapshot(drone, op, pilot, insurance, branding);
     await setSnapshot(snapshot);
   } catch (err) {
     console.warn('[dronesPublic] sync failed', { slug: drone.slug, droneId: drone.id, err });

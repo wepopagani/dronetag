@@ -17,6 +17,7 @@ const KINDS = new Set(['A1_A3', 'A2', 'STS_THEORETICAL', 'STS_01', 'STS_02', 'cu
 type Body = {
   kind?: unknown;
   label?: unknown;
+  registrationNumber?: unknown;
   issuedBy?: unknown;
   issuedAt?: unknown;
   expiresAt?: unknown;
@@ -45,8 +46,9 @@ export async function POST(request: Request) {
   }
 
   const label = cleanString(body.label, 200);
-  if (kind === 'custom' && !label) {
-    return NextResponse.json({ error: 'custom certificate requires a label' }, { status: 400 });
+  const registrationNumber = cleanString(body.registrationNumber, 64);
+  if (kind === 'custom' && !registrationNumber && !label) {
+    return NextResponse.json({ error: 'custom certificate requires a registration number' }, { status: 400 });
   }
 
   const issuedAt = cleanString(body.issuedAt, 32);
@@ -78,6 +80,7 @@ export async function POST(request: Request) {
     userId: auth.uid,
     kind,
     label,
+    registrationNumber,
     issuedBy: cleanString(body.issuedBy, 200),
     issuedAt,
     expiresAt,

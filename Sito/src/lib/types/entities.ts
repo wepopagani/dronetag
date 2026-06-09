@@ -130,6 +130,8 @@ export interface Insurance {
   // src/lib/utils/index.ts works on this directly.
   provider: string;
   policyNumber: string;
+  /** Policy holder full name (optional, often extracted from PDF). */
+  holderName: string;
   issueDate: string;
   expiryDate: string;
   notes: string;
@@ -159,8 +161,10 @@ export interface Certificate {
   id: string;
   userId: string;
   kind: CertificateKind;
-  /** Free text. Display label for custom; descriptive label otherwise. */
+  /** Legacy display label — prefer `registrationNumber` + kind. */
   label: string;
+  /** ENAC / UAS operator registration number extracted from the certificate PDF. */
+  registrationNumber: string;
   issuedBy: string;
   issuedAt: string;
   expiresAt: string;
@@ -330,6 +334,11 @@ export interface DronePublicSnapshot {
   insuranceValidUntil: string;
   insuranceMaskedPolicyNumber: string;
   insurancePdfUrl: string;
+
+  /** Account-level branding (optional). */
+  profilePhotoUrl: string;
+  logoUrl: string;
+  bannerUrl: string;
 
   /** Cache-buster for clients. */
   updatedAt: string;

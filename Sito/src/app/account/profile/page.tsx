@@ -3,37 +3,34 @@
 /**
  * Account profile editor.
  *
- * Renders two stacked cards:
- *   1. Account-level fields: type toggle (private/company), private OR
- *      company info, address. Persisted to `users/{uid}` via updateAccount.
- *   2. Pilot identity: the singleton pilot record at `pilots/{uid}`,
- *      ensured on first load and persisted via updatePilot.
+ * Renders the account card (type toggle, private/company info, address,
+ * public branding media). The singleton pilot record at `pilots/{uid}` is
+ * still ensured on first load (needed by linked drones) but is no longer
+ * edited from this page.
  *
- * Validation:
- *   - Email is required and must look valid for both account contact and
- *     pilot contact.
- *   - For private accounts, firstName + lastName are required.
- *   - For company accounts, companyName is required.
- *   - All other fields are optional but their values are persisted as
- *     entered (no silent normalisation).
- *
- * Privacy: none of these fields are exposed on the public drone page —
- * the public projection (M1) only emits the operator/pilot DISPLAY name
- * and never the address, phone, DOB, or VAT.
+ * Privacy: contact/address fields stay private. Photo, logo and banner are
+ * copied into public drone snapshots when a drone is published.
  */
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ChangeEvent, FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
-import { ensureAccount, updateAccount } from '@/lib/firebase/account';
-import { ensurePilot, updatePilot } from '@/lib/firebase/pilots';
+import { resyncUserPublicDrones } from '@/lib/firebase/dronesPublic';
+import {
+  ensureAccount,
+  updateAccount,
+  uploadAccountBanner,
+  uploadAccountLogo,
+  uploadAccountProfilePhoto,
+} from '@/lib/firebase/account';
+import { ensurePilot } from '@/lib/firebase/pilots';
 import type { AccountType, Address, UserAccount } from '@/lib/types/account';
-import type { Pilot } from '@/lib/types/entities';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
+import { UploadField } from '@/components/ui/UploadField';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { PlanSlotsSummary } from '@/components/account/PlanSlotsSummary';
 
@@ -53,29 +50,17 @@ interface AccountFormState {
   companyContactPerson: string;
   companyVat: string;
   companyUniqueNumber: string;
-}
-
-interface PilotFormState {
-  firstName: string;
-  lastName: string;
-  dateOfBirth: string;
-  nationality: string;
-  email: string;
-  phone: string;
-  address: Address;
-  operatorCode: string;
-  operatorLicense: string;
-  emergencyContact: string;
+  profilePhotoUrl: string;
+  logoUrl: string;
+  bannerUrl: string;
 }
 
 type AccountErrors = Partial<Record<keyof AccountFormState | 'addressLine1' | 'submit', string>>;
-type PilotErrors = Partial<Record<keyof PilotFormState | 'addressLine1' | 'submit', string>>;
 
 export default function AccountProfilePage() {
   const { user } = useAuth();
   const { t } = useLanguage();
   const [account, setAccount] = useState<UserAccount | null>(null);
-  const [pilot, setPilot] = useState<Pilot | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -84,7 +69,7 @@ export default function AccountProfilePage() {
     (async () => {
       try {
         const a = await ensureAccount(user.uid, user.email ?? '');
-        const p = await ensurePilot(user.uid, {
+        await ensurePilot(user.uid, {
           firstName: a.firstName,
           lastName: a.lastName,
           email: a.email,
@@ -94,7 +79,6 @@ export default function AccountProfilePage() {
         });
         if (cancelled) return;
         setAccount(a);
-        setPilot(p);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -111,7 +95,7 @@ export default function AccountProfilePage() {
     );
   }
 
-  if (!account || !pilot) return null;
+  if (!account || !user) return null;
 
   return (
     <div className="mt-6 space-y-6">
@@ -119,8 +103,11 @@ export default function AccountProfilePage() {
         {t('account.editHint')}
       </p>
       <PlanSlotsSummary />
-      <AccountCard initial={account} onSaved={(next) => setAccount(next)} />
-      <PilotCard initial={pilot} onSaved={(next) => setPilot(next)} />
+      <AccountCard
+        uid={user.uid}
+        initial={account}
+        onSaved={(next) => setAccount(next)}
+      />
       <p className="rounded-lg border border-gray-200 bg-white px-4 py-3 text-xs leading-relaxed text-gray-500">
         {t('legal.platformDisclaimer')}
       </p>
@@ -128,12 +115,12 @@ export default function AccountProfilePage() {
   );
 }
 
-// ─── Account card ─────────────────────────────────────────────────────────
-
 function AccountCard({
+  uid,
   initial,
   onSaved,
 }: {
+  uid: string;
   initial: UserAccount;
   onSaved: (a: UserAccount) => void;
 }) {
@@ -143,12 +130,61 @@ function AccountCard({
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<number | null>(null);
   const [dirty, setDirty] = useState(false);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [bannerFile, setBannerFile] = useState<File | null>(null);
+  const [photoObjUrl, setPhotoObjUrl] = useState<string>();
+  const [logoObjUrl, setLogoObjUrl] = useState<string>();
+  const [bannerObjUrl, setBannerObjUrl] = useState<string>();
+  const blobUrlsRef = useRef(new Set<string>());
+
+  useEffect(() => {
+    setForm(toAccountForm(initial));
+    setPhotoFile(null);
+    setLogoFile(null);
+    setBannerFile(null);
+    setPhotoObjUrl(undefined);
+    setLogoObjUrl(undefined);
+    setBannerObjUrl(undefined);
+    setErrors({});
+    setDirty(false);
+    setSavedAt(null);
+  }, [initial]);
+
+  useEffect(() => {
+    const tracked = blobUrlsRef.current;
+    return () => {
+      tracked.forEach((url) => URL.revokeObjectURL(url));
+      tracked.clear();
+    };
+  }, []);
+
+  function trackBlobUrl(url: string) {
+    blobUrlsRef.current.add(url);
+    return url;
+  }
+
+  function handleImageSelect(
+    file: File,
+    setFile: (f: File | null) => void,
+    setPreview: (url: string | undefined) => void,
+    prevPreview?: string,
+  ) {
+    if (prevPreview && blobUrlsRef.current.has(prevPreview)) {
+      URL.revokeObjectURL(prevPreview);
+      blobUrlsRef.current.delete(prevPreview);
+    }
+    setFile(file);
+    setPreview(trackBlobUrl(URL.createObjectURL(file)));
+    setDirty(true);
+  }
 
   function setField<K extends keyof AccountFormState>(key: K, value: AccountFormState[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
     setDirty(true);
     if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
   }
+
   function setAddress<K extends keyof Address>(key: K, value: string) {
     setForm((prev) => ({ ...prev, address: { ...prev.address, [key]: value } }));
     setDirty(true);
@@ -165,13 +201,45 @@ function AccountCard({
 
     setSaving(true);
     try {
-      await updateAccount(initial.uid, form);
+      let profilePhotoUrl = form.profilePhotoUrl;
+      let logoUrl = form.logoUrl;
+      let bannerUrl = form.bannerUrl;
+
+      if (photoFile) profilePhotoUrl = await uploadAccountProfilePhoto(uid, photoFile);
+      if (logoFile) logoUrl = await uploadAccountLogo(uid, logoFile);
+      if (bannerFile) bannerUrl = await uploadAccountBanner(uid, bannerFile);
+
+      if (photoFile || logoFile || bannerFile) {
+        await resyncUserPublicDrones(uid);
+      }
+
+      const patch = {
+        ...form,
+        profilePhotoUrl,
+        logoUrl,
+        bannerUrl,
+      };
+
+      // Branding URLs are persisted by POST /api/account/branding (Admin SDK).
+      const accountPatch = photoFile || logoFile || bannerFile
+        ? (({ profilePhotoUrl: _p, logoUrl: _l, bannerUrl: _b, ...rest }) => rest)(patch)
+        : patch;
+
+      await updateAccount(uid, accountPatch);
+      await resyncUserPublicDrones(uid);
+
       const next: UserAccount = {
         ...initial,
-        ...form,
+        ...patch,
         updatedAt: new Date().toISOString(),
       };
       onSaved(next);
+      setPhotoFile(null);
+      setLogoFile(null);
+      setBannerFile(null);
+      setPhotoObjUrl(undefined);
+      setLogoObjUrl(undefined);
+      setBannerObjUrl(undefined);
       setDirty(false);
       setSavedAt(Date.now());
     } catch (err) {
@@ -181,6 +249,10 @@ function AccountCard({
       setSaving(false);
     }
   }
+
+  const photoPreview = photoObjUrl || form.profilePhotoUrl || undefined;
+  const logoPreview = logoObjUrl || form.logoUrl || undefined;
+  const bannerPreview = bannerObjUrl || form.bannerUrl || undefined;
 
   return (
     <Card padding="md">
@@ -295,6 +367,33 @@ function AccountCard({
           </Section>
         )}
 
+        <Section title={t('account.section.media')}>
+          <p className="mb-4 text-xs leading-relaxed text-gray-500">{t('account.mediaHint')}</p>
+          <div className="space-y-4">
+            <UploadField
+              label={t('field.photo')}
+              accept="image/jpeg,image/png,image/webp"
+              currentUrl={photoPreview}
+              onUpload={(file) => handleImageSelect(file, setPhotoFile, setPhotoObjUrl, photoObjUrl)}
+              preview
+            />
+            <UploadField
+              label={t('field.logo')}
+              accept="image/jpeg,image/png,image/webp"
+              currentUrl={logoPreview}
+              onUpload={(file) => handleImageSelect(file, setLogoFile, setLogoObjUrl, logoObjUrl)}
+              preview
+            />
+            <UploadField
+              label={t('field.banner')}
+              accept="image/jpeg,image/png,image/webp"
+              currentUrl={bannerPreview}
+              onUpload={(file) => handleImageSelect(file, setBannerFile, setBannerObjUrl, bannerObjUrl)}
+              preview
+            />
+          </div>
+        </Section>
+
         <Section title={t('account.section.address')}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <Input
@@ -340,141 +439,6 @@ function AccountCard({
   );
 }
 
-// ─── Pilot card ───────────────────────────────────────────────────────────
-
-function PilotCard({
-  initial,
-  onSaved,
-}: {
-  initial: Pilot;
-  onSaved: (p: Pilot) => void;
-}) {
-  const { t } = useLanguage();
-  const [form, setForm] = useState<PilotFormState>(() => toPilotForm(initial));
-  const [errors, setErrors] = useState<PilotErrors>({});
-  const [saving, setSaving] = useState(false);
-  const [savedAt, setSavedAt] = useState<number | null>(null);
-  const [dirty, setDirty] = useState(false);
-
-  function setField<K extends keyof PilotFormState>(key: K, value: PilotFormState[K]) {
-    setForm((prev) => ({ ...prev, [key]: value }));
-    setDirty(true);
-    if (errors[key]) setErrors((e) => ({ ...e, [key]: undefined }));
-  }
-
-  async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    const v = validatePilotForm(form, t);
-    setErrors(v);
-    if (hasErrors(v)) return;
-
-    setSaving(true);
-    try {
-      await updatePilot(initial.userId, form);
-      onSaved({ ...initial, ...form, updatedAt: new Date().toISOString() });
-      setDirty(false);
-      setSavedAt(Date.now());
-    } catch (err) {
-      console.error('[pilot] save failed', err);
-      setErrors({ submit: t('account.saveError') });
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <Card padding="md">
-      <form onSubmit={handleSubmit} noValidate className="space-y-6">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-base font-semibold text-gray-900">
-            {t('account.section.pilot')}
-          </h2>
-          {savedAt && !dirty ? (
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-              {t('account.saved')}
-            </span>
-          ) : null}
-        </header>
-
-        <FormErrorBanner show={Boolean(errors.submit)} message={errors.submit} />
-
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Input
-            label={t('field.firstName')}
-            name="pilotFirstName"
-            value={form.firstName}
-            onChange={(e) => setField('firstName', e.target.value)}
-            required
-            error={errors.firstName}
-          />
-          <Input
-            label={t('field.lastName')}
-            name="pilotLastName"
-            value={form.lastName}
-            onChange={(e) => setField('lastName', e.target.value)}
-            required
-            error={errors.lastName}
-          />
-          <Input
-            label={t('field.birthDate')}
-            name="pilotDob"
-            type="date"
-            value={form.dateOfBirth}
-            onChange={(e) => setField('dateOfBirth', e.target.value)}
-          />
-          <Input
-            label={t('field.nationality')}
-            name="pilotNationality"
-            value={form.nationality}
-            onChange={(e) => setField('nationality', e.target.value)}
-          />
-          <Input
-            label={t('field.email')}
-            name="pilotEmail"
-            type="email"
-            value={form.email}
-            onChange={(e) => setField('email', e.target.value)}
-            error={errors.email}
-          />
-          <Input
-            label={t('field.phone')}
-            name="pilotPhone"
-            value={form.phone}
-            onChange={(e) => setField('phone', e.target.value)}
-          />
-          <Input
-            label={t('field.operatorCode')}
-            name="pilotOperatorCode"
-            value={form.operatorCode}
-            onChange={(e) => setField('operatorCode', e.target.value)}
-          />
-          <Input
-            label={t('field.operatorLicense')}
-            name="pilotOperatorLicense"
-            value={form.operatorLicense}
-            onChange={(e) => setField('operatorLicense', e.target.value)}
-          />
-          <Input
-            label={t('field.emergencyContact')}
-            name="pilotEmergency"
-            value={form.emergencyContact}
-            onChange={(e) => setField('emergencyContact', e.target.value)}
-            className="sm:col-span-2"
-          />
-        </div>
-
-        <div className="flex items-center justify-end">
-          <Button type="submit" loading={saving} disabled={!dirty}>
-            {t('common.save')}
-          </Button>
-        </div>
-      </form>
-    </Card>
-  );
-}
-
-// ─── Section primitive ────────────────────────────────────────────────────
-
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="border-t border-gray-100 pt-6">
@@ -483,8 +447,6 @@ function Section({ title, children }: { title: string; children: React.ReactNode
     </div>
   );
 }
-
-// ─── Helpers ──────────────────────────────────────────────────────────────
 
 function toAccountForm(a: UserAccount): AccountFormState {
   return {
@@ -499,21 +461,9 @@ function toAccountForm(a: UserAccount): AccountFormState {
     companyContactPerson: a.companyContactPerson,
     companyVat: a.companyVat,
     companyUniqueNumber: a.companyUniqueNumber,
-  };
-}
-
-function toPilotForm(p: Pilot): PilotFormState {
-  return {
-    firstName: p.firstName,
-    lastName: p.lastName,
-    dateOfBirth: p.dateOfBirth,
-    nationality: p.nationality,
-    email: p.email,
-    phone: p.phone,
-    address: { ...EMPTY_ADDRESS, ...p.address },
-    operatorCode: p.operatorCode,
-    operatorLicense: p.operatorLicense,
-    emergencyContact: p.emergencyContact,
+    profilePhotoUrl: a.profilePhotoUrl ?? '',
+    logoUrl: a.logoUrl ?? '',
+    bannerUrl: a.bannerUrl ?? '',
   };
 }
 
@@ -529,16 +479,6 @@ function validateAccountForm(form: AccountFormState, t: Translator): AccountErro
     if (!form.lastName.trim()) e.lastName = t('form.validation.required');
   } else {
     if (!form.companyName.trim()) e.companyName = t('form.validation.required');
-  }
-  return e;
-}
-
-function validatePilotForm(form: PilotFormState, t: Translator): PilotErrors {
-  const e: PilotErrors = {};
-  if (!form.firstName.trim()) e.firstName = t('form.validation.required');
-  if (!form.lastName.trim()) e.lastName = t('form.validation.required');
-  if (form.email.trim() && !EMAIL_RX.test(form.email.trim())) {
-    e.email = t('form.errors.invalidEmail');
   }
   return e;
 }

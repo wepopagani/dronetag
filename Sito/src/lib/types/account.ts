@@ -19,6 +19,19 @@ export const EMPTY_ADDRESS: Address = {
 /** Whether this user is a private individual or a company. */
 export type AccountType = 'private' | 'company';
 
+/** Visual branding shown on public drone pages (`/u/[slug]`). */
+export interface AccountBranding {
+  profilePhotoUrl: string;
+  logoUrl: string;
+  bannerUrl: string;
+}
+
+export const EMPTY_ACCOUNT_BRANDING: AccountBranding = {
+  profilePhotoUrl: '',
+  logoUrl: '',
+  bannerUrl: '',
+};
+
 export interface UserAccount {
   uid: string;
   email: string;
@@ -42,6 +55,11 @@ export interface UserAccount {
   /** Optional country-specific company registry number (e.g. REA/CH-UID). */
   companyUniqueNumber: string;
 
+  /** Public-facing media copied into `dronesPublic` snapshots on save. */
+  profilePhotoUrl: string;
+  logoUrl: string;
+  bannerUrl: string;
+
   createdAt: string;
   updatedAt: string;
 }
@@ -53,6 +71,7 @@ export const EMPTY_USER_ACCOUNT_EXTRAS = {
   companyContactPerson: '',
   companyVat: '',
   companyUniqueNumber: '',
+  ...EMPTY_ACCOUNT_BRANDING,
 };
 
 // ─── Orders (Firestore: `orders/{id}` with `userId` field) ─────────────────

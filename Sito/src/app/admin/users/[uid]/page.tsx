@@ -753,7 +753,9 @@ function CertificatesSection({
           {certificates.map((c) => (
             <li key={c.id} className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm">
               <div>
-                <span className="font-medium text-gray-900">{c.label || c.kind}</span>
+                <span className="font-medium text-gray-900">
+                  {c.registrationNumber || c.kind}
+                </span>
                 <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
                   {t(`verification.${c.verificationStatus}`)}
                 </span>

@@ -124,6 +124,15 @@ export default function AccountOperatorsPage() {
 
   const cap = slots ? Math.min(slots.operator, MAX_OPERATORS) : MAX_OPERATORS;
   const atCap = operators.length >= cap;
+  const sortedOperators = useMemo(
+    () =>
+      [...operators].sort((a, b) => {
+        if (a.isDefault && !b.isDefault) return -1;
+        if (!a.isDefault && b.isDefault) return 1;
+        return (a.createdAt || '').localeCompare(b.createdAt || '');
+      }),
+    [operators],
+  );
 
   function dronesUsingOperator(opId: string): Drone[] {
     return drones.filter((d) =>
@@ -131,6 +140,25 @@ export default function AccountOperatorsPage() {
       d.status === 'active' &&
       d.visibility === 'public',
     );
+  }
+
+  async function handleSetCurrent(op: Operator) {
+    if (op.isDefault) return;
+    setSavingId(op.id);
+    setSaveError(null);
+    try {
+      const prevDefault = operators.find((o) => o.isDefault);
+      if (prevDefault) {
+        await updateOperator(prevDefault.id, { isDefault: false });
+      }
+      await updateOperator(op.id, { isDefault: true });
+      await reload();
+    } catch (err) {
+      console.error('[operators] set current failed', err);
+      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
+    } finally {
+      setSavingId(null);
+    }
   }
 
   async function handleSave(form: OperatorFormState, target: Operator | null) {
@@ -209,17 +237,24 @@ export default function AccountOperatorsPage() {
           }
         />
       ) : (
-        <ul className="space-y-3">
-          {operators.map((op) => (
-            <OperatorRow
-              key={op.id}
-              operator={op}
-              droneUsage={dronesUsingOperator(op.id).length}
-              onEdit={() => setEditing(op)}
-              onDelete={() => setConfirmingDelete(op)}
-            />
-          ))}
-        </ul>
+        <>
+          <p className="mb-3 text-xs leading-relaxed text-gray-500">
+            {t('operator.current.hint')}
+          </p>
+          <ul className="space-y-3">
+            {sortedOperators.map((op) => (
+              <OperatorRow
+                key={op.id}
+                operator={op}
+                droneUsage={dronesUsingOperator(op.id).length}
+                selecting={savingId === op.id}
+                onSetCurrent={() => handleSetCurrent(op)}
+                onEdit={() => setEditing(op)}
+                onDelete={() => setConfirmingDelete(op)}
+              />
+            ))}
+          </ul>
+        </>
       )}
 
       {(creating || editing) && (
@@ -264,45 +299,86 @@ export default function AccountOperatorsPage() {
 function OperatorRow({
   operator,
   droneUsage,
+  selecting,
+  onSetCurrent,
   onEdit,
   onDelete,
 }: {
   operator: Operator;
   droneUsage: number;
+  selecting: boolean;
+  onSetCurrent: () => void;
   onEdit: () => void;
   onDelete: () => void;
 }) {
   const { t } = useLanguage();
+  const isCurrent = operator.isDefault;
+
   return (
     <li>
-      <Card padding="md">
+      <Card
+        padding="md"
+        className={isCurrent ? 'ring-2 ring-blue-600/30 ring-inset' : undefined}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h3 className="text-base font-semibold text-gray-900">
-                {operatorDisplayName(operator)}
-              </h3>
-              {operator.isDefault ? (
-                <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-700 ring-1 ring-inset ring-blue-600/20">
-                  {t('operator.field.isDefault')}
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <button
+              type="button"
+              onClick={onSetCurrent}
+              disabled={isCurrent || selecting}
+              aria-pressed={isCurrent}
+              aria-label={
+                isCurrent
+                  ? t('operator.current.badge')
+                  : t('operator.current.set', { name: operatorDisplayName(operator) })
+              }
+              className="tap-44 mt-0.5 inline-flex shrink-0 items-center justify-center rounded-full p-1 transition hover:bg-gray-100 disabled:cursor-default disabled:hover:bg-transparent"
+            >
+              {selecting ? (
+                <span className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600" />
+              ) : (
+                <span
+                  className={
+                    isCurrent
+                      ? 'flex h-5 w-5 items-center justify-center rounded-full border-[5px] border-blue-600 bg-white'
+                      : 'h-5 w-5 rounded-full border-2 border-gray-300 bg-white'
+                  }
+                  aria-hidden
+                />
+              )}
+            </button>
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="text-base font-semibold text-gray-900">
+                  {operatorDisplayName(operator)}
+                </h3>
+                {isCurrent ? (
+                  <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                    {t('operator.current.badge')}
+                  </span>
+                ) : null}
+                <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
+                  {t(`operator.kind.${operator.kind}`)}
                 </span>
-              ) : null}
-              <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
-                {t(`operator.kind.${operator.kind}`)}
-              </span>
-            </div>
-            <p className="mt-1 text-xs text-gray-500">
-              {operator.kind === 'company'
-                ? operator.company.email || ''
-                : operator.private.email || ''}
-            </p>
-            {droneUsage > 0 ? (
-              <p className="mt-1 text-xs text-amber-700">
-                {t('operator.delete.warningPublic', { count: droneUsage })}
+              </div>
+              <p className="mt-1 text-xs text-gray-500">
+                {operator.kind === 'company'
+                  ? operator.company.email || ''
+                  : operator.private.email || ''}
               </p>
-            ) : null}
+              {droneUsage > 0 ? (
+                <p className="mt-1 text-xs text-amber-700">
+                  {t('operator.delete.warningPublic', { count: droneUsage })}
+                </p>
+              ) : null}
+            </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            {!isCurrent ? (
+              <Button variant="secondary" size="sm" onClick={onSetCurrent} loading={selecting}>
+                {t('operator.current.setShort')}
+              </Button>
+            ) : null}
             <Button variant="ghost" size="sm" onClick={onEdit}>
               {t('common.edit')}
             </Button>

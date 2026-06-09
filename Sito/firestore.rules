@@ -68,6 +68,7 @@ service cloud.firestore {
                               'accountType','firstName','lastName','dateOfBirth',
                               'email','phone','address',
                               'companyName','companyContactPerson','companyVat','companyUniqueNumber',
+                              'profilePhotoUrl','logoUrl','bannerUrl',
                               'updatedAt'
                             ]);
       allow read, write: if isAdmin();

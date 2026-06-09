@@ -41,6 +41,9 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
     companyContactPerson: str('companyContactPerson'),
     companyVat: str('companyVat'),
     companyUniqueNumber: str('companyUniqueNumber'),
+    profilePhotoUrl: str('profilePhotoUrl'),
+    logoUrl: str('logoUrl'),
+    bannerUrl: str('bannerUrl'),
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
   };

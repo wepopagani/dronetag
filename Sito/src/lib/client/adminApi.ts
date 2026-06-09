@@ -10,7 +10,7 @@ export async function adminFetch(
 ): Promise<Response> {
   const user = getCurrentUser();
   const headers = new Headers(init.headers);
-  if (!headers.has('content-type') && init.body) {
+  if (!headers.has('content-type') && init.body && !(init.body instanceof FormData)) {
     headers.set('content-type', 'application/json');
   }
   if (user) {

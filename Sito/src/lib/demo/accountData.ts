@@ -27,6 +27,9 @@ export const DEMO_USER_ACCOUNT: UserAccount = {
   companyContactPerson: '',
   companyVat: '',
   companyUniqueNumber: '',
+  profilePhotoUrl: '',
+  logoUrl: '',
+  bannerUrl: '',
   createdAt: ago(120),
   updatedAt: ago(5),
 };

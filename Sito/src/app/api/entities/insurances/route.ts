@@ -17,6 +17,7 @@ type Body = {
   operatorId?: unknown;
   provider?: unknown;
   policyNumber?: unknown;
+  holderName?: unknown;
   issueDate?: unknown;
   expiryDate?: unknown;
   notes?: unknown;
@@ -95,6 +96,7 @@ export async function POST(request: Request) {
     operatorId,
     provider,
     policyNumber,
+    holderName: cleanString(body.holderName, 200),
     issueDate,
     expiryDate,
     notes: cleanString(body.notes, 4000),

@@ -21,11 +21,15 @@ const CERTIFICATES = 'certificates';
 
 function certificateFromRaw(id: string, raw: Record<string, unknown>): Certificate {
   const str = (k: string) => (typeof raw[k] === 'string' ? (raw[k] as string) : '');
+  const label = str('label');
+  const registrationNumber = str('registrationNumber')
+    || (label && !/training|coordinator|first and last/i.test(label) && /[0-9]/.test(label) ? label : '');
   return {
     id,
     userId: str('userId'),
     kind: (str('kind') || 'custom') as CertificateKind,
-    label: str('label'),
+    label,
+    registrationNumber,
     issuedBy: str('issuedBy'),
     issuedAt: str('issuedAt'),
     expiresAt: str('expiresAt'),
@@ -71,6 +75,7 @@ export async function createCertificate(
     body: JSON.stringify({
       kind: data.kind,
       label: data.label,
+      registrationNumber: data.registrationNumber,
       issuedBy: data.issuedBy,
       issuedAt: data.issuedAt,
       expiresAt: data.expiresAt,
@@ -84,6 +89,26 @@ export async function createCertificate(
   }
   if (!body.id) throw new Error('create certificate failed: missing id');
   return body.id;
+}
+
+/** Upload certificate PDF via Admin SDK (avoids client Storage rules). */
+export async function uploadCertificatePdf(certificateId: string, file: File): Promise<string> {
+  if (DEMO_MODE) {
+    await new Promise((r) => setTimeout(r, 300));
+    return URL.createObjectURL(file);
+  }
+  const form = new FormData();
+  form.append('file', file);
+  const res = await adminFetch(`/api/entities/certificates/${certificateId}/pdf`, {
+    method: 'POST',
+    body: form,
+  });
+  const body = (await res.json().catch(() => ({}))) as { fileUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `upload certificate pdf failed (${res.status})`);
+  }
+  if (!body.fileUrl) throw new Error('upload certificate pdf failed: missing fileUrl');
+  return body.fileUrl;
 }
 
 export async function updateCertificate(id: string, patch: Partial<Certificate>): Promise<void> {

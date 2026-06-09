@@ -46,6 +46,9 @@ export async function ensureAccount(
     companyContactPerson: seed.companyContactPerson ?? '',
     companyVat: seed.companyVat ?? '',
     companyUniqueNumber: seed.companyUniqueNumber ?? '',
+    profilePhotoUrl: seed.profilePhotoUrl ?? '',
+    logoUrl: seed.logoUrl ?? '',
+    bannerUrl: seed.bannerUrl ?? '',
     createdAt: now,
     updatedAt: now,
   };

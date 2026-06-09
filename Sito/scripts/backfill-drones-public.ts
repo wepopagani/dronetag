@@ -142,14 +142,17 @@ async function main() {
 
     // Resolve linked entities. Each is a doc lookup; the script runs as
     // an admin so it can read across users.
-    const [opSnap, pilotSnap, insSnap] = await Promise.all([
+    const [opSnap, pilotSnap, insSnap, userSnap] = await Promise.all([
       effOpId ? getDoc(doc(db, 'operators', effOpId)) : Promise.resolve(null),
       drone.linkedPilotId ? getDoc(doc(db, 'pilots', drone.linkedPilotId)) : Promise.resolve(null),
       drone.insuranceId ? getDoc(doc(db, 'insurances', drone.insuranceId)) : Promise.resolve(null),
+      getDoc(doc(db, 'users', drone.userId)),
     ]);
     const op = opSnap && opSnap.exists() ? (opSnap.data() as unknown as Operator) : null;
     const pilot = pilotSnap && pilotSnap.exists() ? (pilotSnap.data() as unknown as Pilot) : null;
     const insurance = insSnap && insSnap.exists() ? (insSnap.data() as unknown as Insurance) : null;
+    const userRaw = userSnap?.exists() ? (userSnap.data() as Record<string, unknown>) : null;
+    const userStr = (k: string) => (typeof userRaw?.[k] === 'string' ? (userRaw[k] as string) : '');
 
     let holderKind: DronePublicSnapshot['holderKind'] = 'pilot';
     let holderDisplayName = '—';
@@ -179,6 +182,9 @@ async function main() {
       insuranceValidUntil: insurance?.expiryDate ?? '',
       insuranceMaskedPolicyNumber: insurance?.policyNumber ? maskPolicyNumber(insurance.policyNumber) : '',
       insurancePdfUrl: insurance?.pdfUrl ?? '',
+      profilePhotoUrl: userStr('profilePhotoUrl'),
+      logoUrl: userStr('logoUrl'),
+      bannerUrl: userStr('bannerUrl'),
       updatedAt: new Date().toISOString(),
     };
 

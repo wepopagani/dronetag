@@ -124,9 +124,31 @@ export function uploadBanner(uid: string, profileId: string, file: File): Promis
   return uploadFile(file, userScopedPath(uid, `profiles/${profileId}/banner.${ext}`));
 }
 
+const ACCOUNT_BRANDING_SCOPE = 'account';
+
+/** @deprecated Prefer uploadAccountBranding from `@/lib/firebase/account`. */
+export function uploadAccountProfilePhoto(uid: string, file: File): Promise<string> {
+  return uploadProfilePhoto(uid, ACCOUNT_BRANDING_SCOPE, file);
+}
+
+/** @deprecated Prefer uploadAccountBranding from `@/lib/firebase/account`. */
+export function uploadAccountLogo(uid: string, file: File): Promise<string> {
+  return uploadLogo(uid, ACCOUNT_BRANDING_SCOPE, file);
+}
+
+/** @deprecated Prefer uploadAccountBranding from `@/lib/firebase/account`. */
+export function uploadAccountBanner(uid: string, file: File): Promise<string> {
+  return uploadBanner(uid, ACCOUNT_BRANDING_SCOPE, file);
+}
+
 export function uploadPolicyPdf(uid: string, profileId: string, file: File): Promise<string> {
   validateFile(file, ALLOWED_PDF_TYPES, MAX_PDF_SIZE);
   return uploadFile(file, userScopedPath(uid, `profiles/${profileId}/insurance/policy.pdf`));
+}
+
+export function uploadInsurancePdf(uid: string, insuranceId: string, file: File): Promise<string> {
+  validateFile(file, ALLOWED_PDF_TYPES, MAX_PDF_SIZE);
+  return uploadFile(file, userScopedPath(uid, `insurances/${insuranceId}/policy.pdf`));
 }
 
 export function uploadQrImage(uid: string, profileId: string, file: File): Promise<string> {
