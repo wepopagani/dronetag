@@ -20,7 +20,7 @@ export type TextareaProps = {
 >;
 
 const fieldBase =
-  'w-full rounded-lg border px-4 py-2.5 text-sm outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y min-h-[2.75rem]';
+  'w-full rounded-lg border px-4 py-3 text-base outline-none transition focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 resize-y min-h-[2.75rem] sm:py-2.5 sm:text-sm';
 
 export function Textarea({
   label,

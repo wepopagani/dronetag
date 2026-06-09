@@ -58,12 +58,16 @@ function setIdTokenCookie(token: string | null): void {
 
 async function postSessionCookie(token: string): Promise<void> {
   try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 8000);
     await fetch('/api/session', {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ idToken: token }),
+      signal: controller.signal,
     });
+    clearTimeout(timer);
   } catch {
     // Best-effort. The proxy still has the JS-readable cookie.
   }
@@ -104,16 +108,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await postSessionCookie(token);
     }
 
-    const unsubscribe = onAuthChange(async (u) => {
+    const unsubscribe = onAuthChange((u) => {
       setUser(u);
-      try {
-        await applyClaims(u);
-      } catch (err) {
-        console.warn('[auth] claims apply failed', err);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
+      // Don't block the UI on token refresh / session cookie — especially on
+      // mobile where `/api/session` can be slow over LAN dev servers.
+      if (!cancelled) setLoading(false);
+      void (async () => {
+        try {
+          await applyClaims(u);
+        } catch (err) {
+          console.warn('[auth] claims apply failed', err);
+        }
+      })();
     });
+
+    // Safety net: if Firebase auth never fires (blocked storage, offline), unblock UI.
+    const loadingTimeout = setTimeout(() => {
+      if (!cancelled) setLoading(false);
+    }, 6000);
 
     // V-030: periodic refresh keeps `isAdmin` in sync with the latest
     // server-side claims and rotates the cookie before it expires.
@@ -129,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     return () => {
       cancelled = true;
+      clearTimeout(loadingTimeout);
       unsubscribe();
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
     };

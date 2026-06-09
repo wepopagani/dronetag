@@ -16,7 +16,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       {!publicDrone ? <Navbar /> : null}
-      <main className={publicDrone ? 'min-h-dvh' : 'min-h-screen pt-16'}>
+      <main className={publicDrone ? 'min-h-dvh' : 'min-h-screen pt-[calc(4rem+var(--safe-top))]'}>
         {children}
       </main>
     </>

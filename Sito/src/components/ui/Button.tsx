@@ -15,7 +15,7 @@ const variantClasses = {
 const sizeClasses = {
   sm: 'px-3 py-1.5 text-sm',
   md: 'px-4 py-2 text-sm',
-  lg: 'px-5 py-2.5 text-base',
+  lg: 'px-5 py-3 text-base min-h-[3rem]',
 } as const;
 
 export type ButtonVariant = keyof typeof variantClasses;
@@ -33,6 +33,8 @@ export type ButtonProps = {
   loading?: boolean;
   className?: string;
   fullWidth?: boolean;
+  /** Associates a submit button with a form by id (when rendered outside the form). */
+  form?: string;
 };
 
 function Spinner({ className }: { className?: string }) {
@@ -72,6 +74,7 @@ export function Button({
   loading = false,
   className,
   fullWidth,
+  form,
 }: ButtonProps) {
   const isDisabled = disabled || loading;
 
@@ -102,6 +105,7 @@ export function Button({
       type={type}
       onClick={onClick}
       disabled={isDisabled}
+      form={form}
       className={sharedClassName}
     >
       {loading && <Spinner />}

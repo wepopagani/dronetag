@@ -40,7 +40,12 @@ body {
 /* Minimum 44×44 CSS px tap target — Apple HIG / WCAG 2.5.5 recommendation.
    Applied to the public-facing Report button and any other outdoor / glove-
    friendly CTA via `.tap-44`. */
-.tap-44 { min-height: 44px; min-width: 44px; }
+.tap-44 {
+  min-height: 44px;
+  min-width: 44px;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
 
 /* Avoid 100vh jumps when the iOS / Android on-screen keyboard appears. */
 .h-dvh   { height: 100dvh; }

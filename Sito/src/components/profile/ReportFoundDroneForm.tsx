@@ -195,37 +195,66 @@ export function ReportFoundDroneForm({
   }
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={t('reportFound.title')}>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={t('reportFound.title')}
+      footer={
+        success ? undefined : (
+          <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <Button
+              variant="ghost"
+              onClick={onClose}
+              disabled={submitting}
+              fullWidth
+              className="tap-44 sm:w-auto"
+            >
+              {t('common.cancel')}
+            </Button>
+            <Button
+              type="submit"
+              form="report-found-form"
+              loading={submitting}
+              fullWidth
+              size="lg"
+              className="tap-44 sm:w-auto"
+            >
+              {submitting ? t('reportFound.submitting') : t('reportFound.submit')}
+            </Button>
+          </div>
+        )
+      }
+    >
       {success ? (
         <SuccessPanel onClose={onClose} />
       ) : (
-        <form onSubmit={handleSubmit} noValidate className="space-y-4">
-          <p className="text-sm text-gray-600">{t('reportFound.subtitle')}</p>
+        <form id="report-found-form" onSubmit={handleSubmit} noValidate className="space-y-4 pb-1">
+          <p className="text-sm leading-relaxed text-gray-600">{t('reportFound.subtitle')}</p>
 
           <FormErrorBanner show={Boolean(submitError)} message={submitError ?? undefined} />
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <Input
-              label={t('reportFound.field.finderName')}
-              name="finderName"
-              value={form.finderName}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setField('finderName', e.target.value)}
-              autoComplete="name"
-              maxLength={200}
-            />
-            <Input
-              label={t('reportFound.field.finderEmail')}
-              name="finderEmail"
-              type="email"
-              value={form.contactEmail}
-              onChange={(e: ChangeEvent<HTMLInputElement>) =>
-                setField('contactEmail', e.target.value)
-              }
-              autoComplete="email"
-              maxLength={320}
-              error={errors.contactEmail}
-            />
-          </div>
+          <Input
+            label={t('reportFound.field.finderName')}
+            name="finderName"
+            value={form.finderName}
+            onChange={(e: ChangeEvent<HTMLInputElement>) => setField('finderName', e.target.value)}
+            autoComplete="name"
+            maxLength={200}
+          />
+          <Input
+            label={t('reportFound.field.finderEmail')}
+            name="finderEmail"
+            type="email"
+            inputMode="email"
+            autoCapitalize="off"
+            value={form.contactEmail}
+            onChange={(e: ChangeEvent<HTMLInputElement>) =>
+              setField('contactEmail', e.target.value)
+            }
+            autoComplete="email"
+            maxLength={320}
+            error={errors.contactEmail}
+          />
 
           <Textarea
             label={t('reportFound.field.message')}
@@ -249,12 +278,12 @@ export function ReportFoundDroneForm({
             <p className="text-xs text-gray-500">{t('reportFound.field.locationTextHint')}</p>
           </div>
 
-          <div className="rounded-lg border border-gray-200 bg-gray-50/60 p-3.5">
+          <div className="rounded-xl border border-gray-200 bg-gray-50/60 p-4">
             {location ? (
-              <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-                <div className="flex items-center gap-2 text-emerald-700">
+              <div className="space-y-3">
+                <div className="flex items-start gap-2 text-sm text-emerald-700">
                   <svg
-                    className="h-4 w-4"
+                    className="mt-0.5 h-4 w-4 shrink-0"
                     viewBox="0 0 20 20"
                     fill="currentColor"
                     aria-hidden
@@ -265,39 +294,45 @@ export function ReportFoundDroneForm({
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span className="font-medium">{t('reportFound.geolocation.added')}</span>
-                  <span className="font-mono text-xs text-gray-600">
-                    {t('inbox.locationCoords', {
-                      lat: location.lat.toFixed(5),
-                      lng: location.lng.toFixed(5),
-                      accuracy: Math.round(location.accuracy),
-                    })}
-                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium">{t('reportFound.geolocation.added')}</p>
+                    <p className="mt-0.5 break-all font-mono text-xs text-gray-600">
+                      {t('inbox.locationCoords', {
+                        lat: location.lat.toFixed(5),
+                        lng: location.lng.toFixed(5),
+                        accuracy: Math.round(location.accuracy),
+                      })}
+                    </p>
+                  </div>
                 </div>
                 <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => setLocation(null)}
                   type="button"
+                  fullWidth
+                  className="tap-44 sm:w-auto"
                 >
                   {t('reportFound.geolocation.remove')}
                 </Button>
               </div>
             ) : (
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-gray-600">{t('reportFound.geolocation.add')}</p>
+              <div className="space-y-3">
+                <p className="text-sm text-gray-600">{t('reportFound.geolocation.add')}</p>
                 <Button
                   variant="secondary"
-                  size="sm"
                   onClick={captureLocation}
                   loading={requestingGeo}
                   type="button"
+                  fullWidth
+                  size="lg"
+                  className="tap-44"
                 >
                   {t('reportFound.geolocation.add')}
                 </Button>
               </div>
             )}
-            {geoError ? <p className="mt-2 text-xs text-red-600">{geoError}</p> : null}
+            {geoError ? <p className="text-xs text-red-600">{geoError}</p> : null}
           </div>
 
           {/* Honeypot — visually hidden from real users, irresistible to bots. */}
@@ -318,15 +353,6 @@ export function ReportFoundDroneForm({
           <p className="rounded-lg bg-blue-50 px-3 py-2.5 text-xs leading-relaxed text-blue-800">
             {t('reportFound.privacy')}
           </p>
-
-          <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
-            <Button variant="ghost" onClick={onClose} disabled={submitting}>
-              {t('common.cancel')}
-            </Button>
-            <Button type="submit" loading={submitting}>
-              {submitting ? t('reportFound.submitting') : t('reportFound.submit')}
-            </Button>
-          </div>
         </form>
       )}
     </Modal>
@@ -351,7 +377,9 @@ function SuccessPanel({ onClose }: { onClose: () => void }) {
         <p className="text-sm text-gray-600">{t('reportFound.successBody')}</p>
       </div>
       <div className="flex justify-center pt-2">
-        <Button onClick={onClose}>{t('common.confirm')}</Button>
+        <Button onClick={onClose} fullWidth size="lg" className="tap-44 sm:w-auto">
+          {t('common.confirm')}
+        </Button>
       </div>
     </div>
   );

@@ -146,101 +146,102 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
     LANGUAGES.find((l) => l.value === language)?.label ?? language.toUpperCase();
 
   return (
-    <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-      {/* ── Banner (branding only) ───────────────────────────────────── */}
-      <div className="relative h-28 w-full overflow-hidden sm:h-32">
-        {hasUrl(snapshot.bannerUrl) ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={snapshot.bannerUrl}
-            alt=""
-            referrerPolicy="no-referrer"
-            loading="lazy"
-            className="h-full w-full object-cover"
-          />
-        ) : (
-          <div className="h-full w-full bg-gradient-to-br from-slate-800 via-slate-900 to-gray-950" aria-hidden />
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" aria-hidden />
-
-        {hasUrl(snapshot.logoUrl) ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={snapshot.logoUrl}
-            alt=""
-            referrerPolicy="no-referrer"
-            loading="lazy"
-            className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:h-12 sm:w-12"
-          />
-        ) : null}
-      </div>
-
-      {/* ── Operator / pilot identity (always above the fold) ─────────── */}
-      <div className="border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
-        <div className="flex items-start gap-4">
-          {hasUrl(snapshot.profilePhotoUrl) ? (
+    <div className="overflow-hidden rounded-none border-y border-gray-200 bg-white shadow-none sm:rounded-xl sm:border sm:shadow-lg">
+      {/* ── Banner + identity (avatar overlaps banner on mobile) ──────── */}
+      <div className="relative">
+        <div className="relative h-32 w-full overflow-hidden sm:h-36">
+          {hasUrl(snapshot.bannerUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
-              src={snapshot.profilePhotoUrl}
+              src={snapshot.bannerUrl}
               alt=""
               referrerPolicy="no-referrer"
               loading="lazy"
-              className="h-20 w-20 shrink-0 rounded-xl border border-gray-200 bg-gray-50 object-cover shadow-sm sm:h-24 sm:w-24"
+              className="h-full w-full object-cover"
             />
           ) : (
-            <div
-              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-slate-800 text-xl font-bold tracking-wide text-white shadow-sm sm:h-24 sm:w-24"
-              aria-hidden
-            >
-              {holderInitials(snapshot.holderDisplayName)}
-            </div>
+            <div className="h-full w-full bg-gradient-to-br from-slate-800 via-slate-900 to-gray-950" aria-hidden />
           )}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-black/10 to-transparent" aria-hidden />
 
-          <div className="min-w-0 flex-1 pt-0.5">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
-              {t('publicDrone.eyebrow')}
-            </p>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
-              {t(holderRoleKey(snapshot.holderKind))}
-            </p>
-            <h1 className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-gray-900 sm:text-2xl">
-              {snapshot.holderDisplayName}
-            </h1>
-            <p className="mt-1.5 text-sm font-medium text-gray-600 sm:text-base">
-              {[snapshot.manufacturer, snapshot.model].filter(Boolean).join(' ').trim() ||
-                t('common.notAvailable')}
-            </p>
+          {hasUrl(snapshot.logoUrl) ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={snapshot.logoUrl}
+              alt=""
+              referrerPolicy="no-referrer"
+              loading="lazy"
+              className="absolute right-3 top-3 h-9 w-9 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:right-4 sm:top-4 sm:h-11 sm:w-11"
+            />
+          ) : null}
+        </div>
+
+        <div className="border-b border-gray-100 bg-white px-4 pb-4 pt-0 sm:px-6 sm:pb-5">
+          <div className="-mt-12 flex flex-col gap-3 sm:-mt-14 sm:flex-row sm:items-end sm:gap-4">
+            {hasUrl(snapshot.profilePhotoUrl) ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={snapshot.profilePhotoUrl}
+                alt=""
+                referrerPolicy="no-referrer"
+                loading="lazy"
+                className="h-[5.5rem] w-[5.5rem] shrink-0 rounded-2xl border-[3px] border-white bg-gray-50 object-cover shadow-md sm:h-24 sm:w-24"
+              />
+            ) : (
+              <div
+                className="flex h-[5.5rem] w-[5.5rem] shrink-0 items-center justify-center rounded-2xl border-[3px] border-white bg-slate-800 text-2xl font-bold tracking-wide text-white shadow-md sm:h-24 sm:w-24"
+                aria-hidden
+              >
+                {holderInitials(snapshot.holderDisplayName)}
+              </div>
+            )}
+
+            <div className="min-w-0 flex-1 sm:pb-0.5">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+                {t('publicDrone.eyebrow')}
+              </p>
+              <p className="mt-0.5 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+                {t(holderRoleKey(snapshot.holderKind))}
+              </p>
+              <h1 className="mt-0.5 text-[1.35rem] font-bold leading-tight tracking-tight text-gray-900 sm:text-2xl">
+                {snapshot.holderDisplayName}
+              </h1>
+              <p className="mt-1 text-sm font-medium text-gray-600 sm:text-base">
+                {[snapshot.manufacturer, snapshot.model].filter(Boolean).join(' ').trim() ||
+                  t('common.notAvailable')}
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ── Status row ─ outdoors-readable badges (STAGING-OPS-1) ─────── */}
-      <div className="flex flex-wrap items-center gap-2 px-5 py-3 sm:px-6">
+      {/* ── Status row ─ outdoors-readable badges ─────────────────────── */}
+      <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
         <span
           className={classNames(
-            'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset',
+            'inline-flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ring-1 ring-inset sm:w-auto sm:py-1.5 sm:text-sm',
             verification.bg,
             verification.text,
           )}
         >
-          <span className={classNames('h-2.5 w-2.5 rounded-full', verification.dot)} aria-hidden />
+          <span className={classNames('h-2.5 w-2.5 shrink-0 rounded-full', verification.dot)} aria-hidden />
           {t(certificateBadgeKey(snapshot.verificationStatus))}
         </span>
         <span
           className={classNames(
-            'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset',
+            'inline-flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ring-1 ring-inset sm:w-auto sm:py-1.5 sm:text-sm',
             policy.bg,
             policy.text,
             policy.ring,
           )}
         >
-          <span className={classNames('h-2.5 w-2.5 rounded-full', policy.dot)} aria-hidden />
+          <span className={classNames('h-2.5 w-2.5 shrink-0 rounded-full', policy.dot)} aria-hidden />
           {t(insuranceBannerKey(snapshot.insuranceStatus as PolicyStatus))}
         </span>
       </div>
 
       {/* ── Insurance banner ───────────────────────────────────────────── */}
-      <div className="px-5 sm:px-6">
+      <div className="px-4 sm:px-6">
         <div
           className={classNames(
             'flex items-start gap-3 rounded-lg border p-3.5 text-sm leading-snug',
@@ -303,7 +304,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
               href={snapshot.insurancePdfUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-3 py-2 text-xs font-medium text-gray-700 shadow-sm transition hover:bg-gray-50"
+              className="tap-44 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-3 text-sm font-medium text-gray-700 shadow-sm transition active:bg-gray-50 sm:w-auto sm:justify-start sm:px-3 sm:py-2 sm:text-xs"
             >
               <IconExternal />
               {t('publicDrone.viewPolicyPdf')}
@@ -335,13 +336,13 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
       {/* ── CTA stack — primary "Report" gets a full-width tall tap target
           on its own row so police / finders can hit it outdoors with gloves
           or one-thumb. (STAGING-OPS-1) ────────────────────────────────── */}
-      <div className="border-t border-gray-200 px-5 py-5 sm:px-6">
+      <div className="safe-pb border-t border-gray-200 bg-white px-4 py-4 sm:px-6 sm:py-5">
         <Button onClick={() => setReportOpen(true)} fullWidth size="lg" className="tap-44">
           <IconLifebuoy />
           {t('publicDrone.reportFound')}
         </Button>
-        <div className="mt-2">
-          <Button href="/login" variant="secondary" fullWidth>
+        <div className="mt-2.5">
+          <Button href="/login" variant="secondary" fullWidth size="lg" className="tap-44">
             <IconLogin />
             {t('publicDrone.openApp')}
           </Button>
@@ -349,7 +350,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
       </div>
 
       {/* ── Footer / disclaimer ───────────────────────────────────────── */}
-      <footer className="border-t border-gray-200 bg-gray-50/80 px-6 py-5 text-xs leading-relaxed text-gray-500">
+      <footer className="border-t border-gray-200 bg-gray-50/80 px-4 py-4 text-xs leading-relaxed text-gray-500 sm:px-6 sm:py-5">
         <p className="text-[11px] font-semibold text-gray-700">{t('legal.notOfficial')}</p>
         <p className="mt-1.5">{t('legal.platformDisclaimer')}</p>
         <p className="mt-3 flex items-center justify-between">
@@ -383,7 +384,7 @@ function Section({
 }) {
   return (
     <section className="border-t border-gray-200">
-      <div className="flex items-center gap-2.5 px-6 pt-5">
+      <div className="flex items-center gap-2.5 px-4 pt-4 sm:px-6 sm:pt-5">
         <span
           className="flex h-5 w-5 shrink-0 items-center justify-center text-gray-400"
           aria-hidden
@@ -392,7 +393,7 @@ function Section({
         </span>
         <h2 className="text-[11px] font-bold uppercase tracking-[0.08em] text-gray-400">{title}</h2>
       </div>
-      <dl className="px-6 pb-5 pt-3">{children}</dl>
+      <dl className="px-4 pb-4 pt-2 sm:px-6 sm:pb-5 sm:pt-3">{children}</dl>
     </section>
   );
 }
@@ -400,12 +401,14 @@ function Section({
 function DataRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
   if (!value) return null;
   return (
-    <div className="flex items-baseline justify-between gap-4 border-b border-gray-100 py-2.5 last:border-b-0">
-      <dt className="shrink-0 text-[13px] text-gray-500">{label}</dt>
+    <div className="border-b border-gray-100 py-3 last:border-b-0 sm:flex sm:items-baseline sm:justify-between sm:gap-4 sm:py-2.5">
+      <dt className="text-xs font-medium uppercase tracking-wide text-gray-400 sm:shrink-0 sm:text-[13px] sm:normal-case sm:tracking-normal sm:text-gray-500">
+        {label}
+      </dt>
       <dd
         className={classNames(
-          'text-right text-[13px] font-medium text-gray-900',
-          mono && 'font-mono tracking-tight',
+          'mt-1 text-[15px] font-medium leading-snug text-gray-900 sm:mt-0 sm:text-right sm:text-[13px]',
+          mono && 'font-mono tracking-tight break-all sm:break-normal',
         )}
       >
         {value}

@@ -72,9 +72,9 @@ export default function SignupPage() {
     }
   }
 
-  if (authLoading || user) {
+  if (user) {
     return (
-      <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-gray-50 px-4">
+      <div className="flex min-h-[calc(100dvh-4rem-var(--safe-top))] items-center justify-center bg-gray-50 px-4">
         <div className="flex items-center gap-3">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
           <p className="text-sm text-gray-500">{t('common.loading')}</p>
@@ -84,7 +84,7 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center bg-gray-50 px-4 py-12">
+    <div className="flex min-h-[calc(100dvh-4rem-var(--safe-top))] items-center justify-center bg-gray-50 px-4 py-8 sm:py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-slate-900">

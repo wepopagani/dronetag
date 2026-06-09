@@ -49,7 +49,7 @@ type Resolved = {
 
 function PageSpinner({ label }: { label: string }) {
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4" role="status">
+    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 px-4 py-8 sm:min-h-[50vh]" role="status">
       <div className="relative h-10 w-10">
         <div className="absolute inset-0 rounded-full border-2 border-gray-200" />
         <div className="absolute inset-0 animate-spin rounded-full border-2 border-transparent border-t-slate-600" />
@@ -61,7 +61,7 @@ function PageSpinner({ label }: { label: string }) {
 
 function UnavailableState({ title, description }: { title: string; description: string }) {
   return (
-    <div className="mx-auto max-w-md">
+    <div className="mx-auto max-w-md px-4 py-6 sm:px-0">
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="flex flex-col items-center px-8 pb-10 pt-12 text-center">
           <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-gray-100">
@@ -142,7 +142,7 @@ export default function PublicProfilePage() {
   return (
     <>
       {/* Content */}
-      <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
+      <div className="mx-auto max-w-2xl px-0 py-0 sm:px-4 sm:py-6 lg:px-6 lg:py-8">
         {isLoading || !value ? (
           <PageSpinner label={t('common.loading')} />
         ) : value.kind === 'error' ? (
