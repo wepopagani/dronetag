@@ -7,6 +7,7 @@ import { adminFirestore } from '@/lib/server/firebaseAdmin';
 import { adminUploadImage, isAllowedImageContentType } from '@/lib/server/storage';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { sanitizeAllowedUrl } from '@/lib/server/urls';
+import { storageErrorResponse } from '@/lib/server/storageErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -59,14 +60,24 @@ export async function POST(request: Request) {
   const ext = extForContentType(contentType);
   const buffer = Buffer.from(await raw.arrayBuffer());
   const path = `users/${auth.uid}/profiles/account/${kind}.${ext}`;
-  const url = await adminUploadImage(path, buffer, contentType);
-  sanitizeAllowedUrl(url, `${kind}Url`);
 
-  const field = BRANDING_FIELD[kind as keyof typeof BRANDING_FIELD];
-  await adminFirestore().collection('users').doc(auth.uid).update({
-    [field]: url,
-    updatedAt: new Date().toISOString(),
-  });
+  let url: string;
+  try {
+    url = await adminUploadImage(path, buffer, contentType);
+    sanitizeAllowedUrl(url, `${kind}Url`);
+  } catch (err) {
+    return storageErrorResponse(err, 'branding upload');
+  }
+
+  try {
+    const field = BRANDING_FIELD[kind as keyof typeof BRANDING_FIELD];
+    await adminFirestore().collection('users').doc(auth.uid).update({
+      [field]: url,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return storageErrorResponse(err, 'branding firestore update');
+  }
 
   return NextResponse.json({ kind, url });
 }

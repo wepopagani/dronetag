@@ -7,6 +7,7 @@ import { adminFirestore } from '@/lib/server/firebaseAdmin';
 import { adminUploadPdf } from '@/lib/server/storage';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { sanitizeAllowedUrl } from '@/lib/server/urls';
+import { storageErrorResponse } from '@/lib/server/storageErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,13 +55,23 @@ export async function POST(request: Request, context: RouteContext) {
 
   const buffer = Buffer.from(await raw.arrayBuffer());
   const path = `users/${auth.uid}/insurances/${id}/policy.pdf`;
-  const pdfUrl = await adminUploadPdf(path, buffer);
-  sanitizeAllowedUrl(pdfUrl, 'pdfUrl');
 
-  await db.collection('insurances').doc(id).update({
-    pdfUrl,
-    updatedAt: new Date().toISOString(),
-  });
+  let pdfUrl: string;
+  try {
+    pdfUrl = await adminUploadPdf(path, buffer);
+    sanitizeAllowedUrl(pdfUrl, 'pdfUrl');
+  } catch (err) {
+    return storageErrorResponse(err, 'insurance pdf upload');
+  }
+
+  try {
+    await db.collection('insurances').doc(id).update({
+      pdfUrl,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return storageErrorResponse(err, 'insurance pdf firestore update');
+  }
 
   return NextResponse.json({ pdfUrl });
 }

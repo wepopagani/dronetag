@@ -135,9 +135,9 @@ export async function uploadAccountBranding(
     method: 'POST',
     body: form,
   });
-  const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string };
+  const body = (await res.json().catch(() => ({}))) as { url?: string; error?: string; message?: string };
   if (!res.ok) {
-    throw new Error(body.error || `upload ${kind} failed (${res.status})`);
+    throw new Error(body.error || body.message || `upload ${kind} failed (${res.status})`);
   }
   if (!body.url) throw new Error(`upload ${kind} failed: missing url`);
   return body.url;

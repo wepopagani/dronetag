@@ -39,6 +39,7 @@ import { PolicyStatusBadge } from '@/components/ui/StatusBadge';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
+import { EntityPdfPreviewModal } from '@/components/account/EntityPdfPreviewModal';
 
 interface CertFormState {
   kind: CertificateKind;
@@ -83,6 +84,7 @@ export default function AccountCertificatesPage() {
   const [editing, setEditing] = useState<Certificate | null>(null);
   const [creating, setCreating] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState<Certificate | null>(null);
+  const [previewing, setPreviewing] = useState<Certificate | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
 
@@ -155,7 +157,10 @@ export default function AccountCertificatesPage() {
       setEditing(null);
     } catch (err) {
       console.error('[certificates] save failed', err);
-      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
+      const msg = err instanceof Error ? err.message : '';
+      setSaveError(
+        msg === 'storage_billing_required' ? t('account.storageBillingRequired') : (msg || t('account.saveError')),
+      );
     } finally {
       setSavingId(null);
     }
@@ -232,6 +237,13 @@ export default function AccountCertificatesPage() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
+                    {c.fileUrl ? (
+                      <Button variant="ghost" size="sm" onClick={() => setPreviewing(c)}>
+                        {t('common.viewDocument')}
+                      </Button>
+                    ) : (
+                      <span className="text-xs text-gray-400">{t('entity.noPdfAttached')}</span>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => setEditing(c)}>{t('common.edit')}</Button>
                     <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(c)}>{t('common.delete')}</Button>
                   </div>
@@ -267,6 +279,13 @@ export default function AccountCertificatesPage() {
         confirmLabel={t('common.delete')}
         onConfirm={handleDelete}
         onClose={() => setConfirmingDelete(null)}
+      />
+
+      <EntityPdfPreviewModal
+        isOpen={Boolean(previewing)}
+        title={previewing ? t(kindLabelKey(previewing.kind)) : ''}
+        url={previewing?.fileUrl ?? ''}
+        onClose={() => setPreviewing(null)}
       />
     </EntityListShell>
   );

@@ -7,6 +7,7 @@ import { adminFirestore } from '@/lib/server/firebaseAdmin';
 import { adminUploadPdf } from '@/lib/server/storage';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { sanitizeAllowedUrl } from '@/lib/server/urls';
+import { storageErrorResponse } from '@/lib/server/storageErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -54,13 +55,23 @@ export async function POST(request: Request, context: RouteContext) {
 
   const buffer = Buffer.from(await raw.arrayBuffer());
   const path = `users/${auth.uid}/certificates/${id}/certificate.pdf`;
-  const fileUrl = await adminUploadPdf(path, buffer);
-  sanitizeAllowedUrl(fileUrl, 'fileUrl');
 
-  await db.collection('certificates').doc(id).update({
-    fileUrl,
-    updatedAt: new Date().toISOString(),
-  });
+  let fileUrl: string;
+  try {
+    fileUrl = await adminUploadPdf(path, buffer);
+    sanitizeAllowedUrl(fileUrl, 'fileUrl');
+  } catch (err) {
+    return storageErrorResponse(err, 'certificate pdf upload');
+  }
+
+  try {
+    await db.collection('certificates').doc(id).update({
+      fileUrl,
+      updatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    return storageErrorResponse(err, 'certificate pdf firestore update');
+  }
 
   return NextResponse.json({ fileUrl });
 }

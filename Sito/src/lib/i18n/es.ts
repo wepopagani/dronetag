@@ -478,6 +478,9 @@ export const translations: TranslationMap = {
   'account.section.pilot': 'Pilot identity',
   'account.saved': 'Changes saved',
   'account.saveError': 'Could not save changes. Please try again.',
+  'account.storageBillingRequired':
+    'Cloud Storage requires the Firebase Blaze plan. Open Firebase console → Project settings → Usage and billing, link a billing account, upgrade to Blaze, then retry.',
+  'entity.noPdfAttached': 'No PDF attached — open Edit and upload the file.',
   'account.editHint': 'Edit your account details and pilot identity. None of these fields are shown publicly.',
 
   'field.addressLine1': 'Address line 1',

@@ -35,10 +35,10 @@ import { Modal } from '@/components/ui/Modal';
 import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
 import { EmptyState } from '@/components/ui/EmptyState';
-import { PDFPreview } from '@/components/ui/PDFPreview';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
+import { EntityPdfPreviewModal } from '@/components/account/EntityPdfPreviewModal';
 
 const DOCUMENT_KINDS: { value: DocumentKind; labelKey: string }[] = [
   { value: 'insurance_policy', labelKey: 'doc.kind.insurance_policy' },
@@ -214,9 +214,11 @@ export default function AccountDocumentsPage() {
                   <div className="flex shrink-0 items-center gap-2">
                     {d.fileUrl ? (
                       <Button variant="ghost" size="sm" onClick={() => setPreviewing(d)}>
-                        {t('common.preview')}
+                        {t('common.viewDocument')}
                       </Button>
-                    ) : null}
+                    ) : (
+                      <span className="text-xs text-gray-400">{t('entity.noPdfAttached')}</span>
+                    )}
                     <Button variant="ghost" size="sm" onClick={() => setEditing(d)}>{t('common.edit')}</Button>
                     <Button variant="ghost" size="sm" onClick={() => setConfirmingDelete(d)}>{t('common.delete')}</Button>
                   </div>
@@ -238,15 +240,12 @@ export default function AccountDocumentsPage() {
         />
       ) : null}
 
-      <Modal
+      <EntityPdfPreviewModal
         isOpen={Boolean(previewing)}
-        onClose={() => setPreviewing(null)}
         title={previewing?.label ?? ''}
-      >
-        {previewing ? (
-          <PDFPreview url={previewing.fileUrl} label={previewing.label} />
-        ) : null}
-      </Modal>
+        url={previewing?.fileUrl ?? ''}
+        onClose={() => setPreviewing(null)}
+      />
 
       <ConfirmDialog
         isOpen={Boolean(confirmingDelete)}

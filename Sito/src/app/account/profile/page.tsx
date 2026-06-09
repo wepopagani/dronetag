@@ -244,7 +244,10 @@ function AccountCard({
       setSavedAt(Date.now());
     } catch (err) {
       console.error('[account] save failed', err);
-      setErrors({ submit: t('account.saveError') });
+      const msg = err instanceof Error ? err.message : '';
+      setErrors({
+        submit: msg === 'storage_billing_required' ? t('account.storageBillingRequired') : t('account.saveError'),
+      });
     } finally {
       setSaving(false);
     }

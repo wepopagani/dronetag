@@ -489,6 +489,9 @@ export const translations = {
   'account.section.pilot': 'Pilot identity',
   'account.saved': 'Changes saved',
   'account.saveError': 'Could not save changes. Please try again.',
+  'account.storageBillingRequired':
+    'Cloud Storage requires the Firebase Blaze plan. Open Firebase console → Project settings → Usage and billing, link a billing account, upgrade to Blaze, then retry.',
+  'entity.noPdfAttached': 'No PDF attached — open Edit and upload the file.',
   'account.editHint': 'Edit your account details. Photo, logo and banner are shown on your public drone page; address, phone and other fields stay private.',
 
   // ── Common address / company fields ──

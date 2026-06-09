@@ -478,6 +478,9 @@ export const translations: TranslationMap = {
   'account.section.pilot': 'Identità pilota',
   'account.saved': 'Modifiche salvate',
   'account.saveError': 'Impossibile salvare. Riprova.',
+  'account.storageBillingRequired':
+    'Cloud Storage richiede il piano Firebase Blaze (a consumo). Apri la console Firebase → Impostazioni progetto → Utilizzo e fatturazione, collega un account di fatturazione e passa a Blaze, poi riprova.',
+  'entity.noPdfAttached': 'PDF non allegato — Modifica e carica il file.',
   'account.editHint': 'Modifica i dati del tuo account. Foto, logo e banner sono visibili sulla pagina pubblica del drone; indirizzo, telefono e altri dati restano privati.',
 
   'field.addressLine1': 'Indirizzo riga 1',
