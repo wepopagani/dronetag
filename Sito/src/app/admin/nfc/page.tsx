@@ -21,7 +21,6 @@ import { accountDisplayName } from '@/lib/utils/entities';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { SectionHeader } from '@/components/ui/SectionHeader';
-import { AdminSubNav } from '@/components/layout/AdminSubNav';
 import type { Drone } from '@/lib/types/entities';
 import type { UserAccount } from '@/lib/types/account';
 
@@ -97,9 +96,7 @@ export default function AdminNfcPage() {
   }
 
   return (
-    <div>
-      <AdminSubNav />
-      <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
+    <div className="mx-auto max-w-[1400px] px-4 py-8 sm:px-6 lg:px-8">
         <SectionHeader title={t('admin.nfc.title')} description={t('admin.nfc.subtitle')} />
 
         <div className="mt-6 flex flex-wrap items-center gap-2">
@@ -156,7 +153,6 @@ export default function AdminNfcPage() {
             </table>
           </div>
         </Card>
-      </div>
     </div>
   );
 }

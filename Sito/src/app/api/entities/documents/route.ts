@@ -59,16 +59,15 @@ export async function POST(request: Request) {
   }
 
   let fileUrl = '';
-  try {
-    fileUrl = sanitizeAllowedUrl(body.fileUrl, 'fileUrl');
-  } catch (err) {
-    if (err instanceof UrlValidationError) {
-      return NextResponse.json({ error: err.message }, { status: 400 });
+  if (body.fileUrl !== undefined && body.fileUrl !== null && String(body.fileUrl).trim()) {
+    try {
+      fileUrl = sanitizeAllowedUrl(body.fileUrl, 'fileUrl');
+    } catch (err) {
+      if (err instanceof UrlValidationError) {
+        return NextResponse.json({ error: err.message }, { status: 400 });
+      }
+      throw err;
     }
-    throw err;
-  }
-  if (!fileUrl) {
-    return NextResponse.json({ error: 'fileUrl is required' }, { status: 400 });
   }
 
   const mimeType = cleanString(body.mimeType, 64);

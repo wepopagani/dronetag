@@ -14,6 +14,7 @@ import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
 import { adminFetch } from '@/lib/client/adminApi';
+import { requestPublicDroneResync } from '@/lib/client/resyncPublicDrones';
 import type { Certificate, CertificateKind } from '@/lib/types/entities';
 import type { VerificationStatus } from '@/lib/types';
 
@@ -112,20 +113,35 @@ export async function uploadCertificatePdf(certificateId: string, file: File): P
 }
 
 export async function updateCertificate(id: string, patch: Partial<Certificate>): Promise<void> {
-  if (DEMO_MODE) return demo.updateCertificate(id, patch);
+  if (DEMO_MODE) {
+    await demo.updateCertificate(id, patch);
+    const cert = await demo.getCertificate(id);
+    if (cert?.userId) await requestPublicDroneResync(cert.userId);
+    return;
+  }
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
+  const before = await getCertificate(id);
   const payload = Object.fromEntries(
     Object.entries(patch).filter(([k, v]) => k !== 'id' && v !== undefined),
   );
   await updateDoc(doc(db, CERTIFICATES, id), { ...payload, updatedAt: new Date().toISOString() });
+  const uid = before?.userId ?? patch.userId;
+  if (uid) await requestPublicDroneResync(uid);
 }
 
 export async function deleteCertificate(id: string): Promise<void> {
-  if (DEMO_MODE) return demo.deleteCertificate(id);
+  if (DEMO_MODE) {
+    const before = await demo.getCertificate(id);
+    await demo.deleteCertificate(id);
+    if (before?.userId) await requestPublicDroneResync(before.userId);
+    return;
+  }
   await awaitFirebaseAuthReady();
   const db = getFirebaseDb();
+  const before = await getCertificate(id);
   await deleteDoc(doc(db, CERTIFICATES, id));
+  if (before?.userId) await requestPublicDroneResync(before.userId);
 }
 
 /** Admin-only: list every certificate across users. */

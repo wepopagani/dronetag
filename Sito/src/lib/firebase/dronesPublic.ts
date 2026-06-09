@@ -33,12 +33,13 @@ import {
 import { awaitFirebaseAuthReady } from '@/lib/firebase/auth';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demo from '@/lib/demo/entitiesStore';
-import { getInsurance } from '@/lib/firebase/insurances';
 import { getAccount } from '@/lib/firebase/account';
+import { getInsurance } from '@/lib/firebase/insurances';
 import { getOperator } from '@/lib/firebase/operators';
 import { getPilot } from '@/lib/firebase/pilots';
 import { listDronesByUser } from '@/lib/firebase/drones';
 import type {
+  Certificate,
   Drone,
   DronePublicSnapshot,
   Insurance,
@@ -48,6 +49,7 @@ import type {
 import type { AccountBranding } from '@/lib/types/account';
 import type { PolicyStatus, VerificationStatus } from '@/lib/types';
 import {
+  deriveCertificateVerification,
   effectiveOperatorId,
   operatorDisplayName,
   pilotDisplayName,
@@ -154,6 +156,7 @@ export function projectSnapshot(
   pilot: Pilot | null,
   insurance: Insurance | null,
   branding: AccountBranding = { profilePhotoUrl: '', logoUrl: '', bannerUrl: '' },
+  certificates: Certificate[] = [],
 ): DronePublicSnapshot {
   let holderKind: DronePublicSnapshot['holderKind'] = 'pilot';
   let holderDisplayName = '—';
@@ -166,12 +169,13 @@ export function projectSnapshot(
   }
 
   const insuranceStatus: PolicyStatus = insurance ? computePolicyStatus(insurance) : 'missing';
+  const certVerification = deriveCertificateVerification(certificates);
 
   return {
     slug: drone.slug,
     droneId: drone.id,
-    verificationStatus: drone.verificationStatus,
-    lastVerifiedAt: drone.lastVerifiedAt,
+    verificationStatus: certVerification.status,
+    lastVerifiedAt: certVerification.lastVerifiedAt,
     publishedAt: drone.publishedAt,
     holderKind,
     holderDisplayName,
@@ -213,11 +217,13 @@ export async function syncDronePublicSnapshot(drone: Drone): Promise<void> {
       return;
     }
     const effId = effectiveOperatorId(drone);
-    const [op, pilot, insurance, account] = await Promise.all([
+    const { listCertificates } = await import('@/lib/firebase/certificates');
+    const [op, pilot, insurance, account, certificates] = await Promise.all([
       effId ? getOperator(effId) : Promise.resolve<Operator | null>(null),
       drone.linkedPilotId ? getPilot(drone.linkedPilotId) : Promise.resolve<Pilot | null>(null),
       drone.insuranceId ? getInsurance(drone.insuranceId) : Promise.resolve<Insurance | null>(null),
       getAccount(drone.userId),
+      listCertificates(drone.userId),
     ]);
     const branding = account
       ? {
@@ -226,7 +232,7 @@ export async function syncDronePublicSnapshot(drone: Drone): Promise<void> {
           bannerUrl: account.bannerUrl,
         }
       : { profilePhotoUrl: '', logoUrl: '', bannerUrl: '' };
-    const snapshot = projectSnapshot(drone, op, pilot, insurance, branding);
+    const snapshot = projectSnapshot(drone, op, pilot, insurance, branding, certificates);
     await setSnapshot(snapshot);
   } catch (err) {
     console.warn('[dronesPublic] sync failed', { slug: drone.slug, droneId: drone.id, err });

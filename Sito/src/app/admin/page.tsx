@@ -1,13 +1,7 @@
 'use client';
 
 /**
- * Admin overview hub.
- *
- * Renders KPI tiles across the multi-entity model (users, drones, reports,
- * plans, active overrides, legacy profiles) and a sub-nav into each admin
- * section. The legacy profile dashboard lives at /admin/profiles and the
- * legacy edit/new flows under /admin/profiles/[id] / /admin/profiles/new
- * are unchanged so existing operators keep working until migration ends.
+ * Admin overview hub — KPI tiles and navigation into each admin section.
  */
 
 import { useEffect, useState } from 'react';
@@ -17,7 +11,6 @@ import { listAllAccounts } from '@/lib/firebase/account';
 import { listAllDrones } from '@/lib/firebase/drones';
 import { listAllReports } from '@/lib/firebase/reports';
 import { listPlans } from '@/lib/firebase/plans';
-import { getAllProfiles } from '@/lib/firebase/firestore';
 import { isActiveOperatorOverride } from '@/lib/utils/entities';
 import { Card } from '@/components/ui/Card';
 import { StatsCard } from '@/components/ui/StatsCard';
@@ -41,7 +34,6 @@ export default function AdminOverviewPage() {
     unreadReports: 0,
     activePlans: 0,
     activeOverrides: 0,
-    legacyProfiles: 0,
   });
   const [health, setHealth] = useState<HealthPayload | null>(null);
   const [loading, setLoading] = useState(true);
@@ -50,12 +42,11 @@ export default function AdminOverviewPage() {
     let cancelled = false;
     (async () => {
       try {
-        const [users, drones, reports, plans, legacyProfiles, healthRes] = await Promise.all([
+        const [users, drones, reports, plans, healthRes] = await Promise.all([
           listAllAccounts(),
           listAllDrones(),
           listAllReports(),
           listPlans(),
-          getAllProfiles(),
           fetch('/api/health', { credentials: 'same-origin' })
             .then((r) => r.json() as Promise<HealthPayload>)
             .catch(() => null),
@@ -69,7 +60,6 @@ export default function AdminOverviewPage() {
           unreadReports: reports.filter((r) => !r.read).length,
           activePlans: plans.filter((p) => p.active).length,
           activeOverrides: drones.filter((d) => isActiveOperatorOverride(d)).length,
-          legacyProfiles: legacyProfiles.length,
         });
         setHealth(healthRes);
       } catch (err) {
@@ -104,7 +94,6 @@ export default function AdminOverviewPage() {
               <StatsCard label={t('admin.stats.reports')} value={counts.reports} />
               <StatsCard label={t('admin.stats.unreadReports')} value={counts.unreadReports} variant={counts.unreadReports > 0 ? 'warning' : 'default'} />
               <StatsCard label={t('admin.stats.plans')} value={counts.activePlans} />
-              <StatsCard label={t('admin.stats.legacyProfiles')} value={counts.legacyProfiles} />
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -113,7 +102,7 @@ export default function AdminOverviewPage() {
               <NavTile href="/admin/reports" title={t('admin.nav.reports')} description={t('admin.reports.subtitle')} />
               <NavTile href="/admin/verify" title={t('admin.nav.verify')} description={t('admin.verify.subtitle')} />
               <NavTile href="/admin/plans" title={t('admin.nav.plans')} description={t('admin.plans.subtitle')} />
-              <NavTile href="/admin/profiles" title={t('admin.nav.legacy')} description="Legacy single-profile collection (pre-M1)." />
+              <NavTile href="/admin/nfc" title={t('admin.nav.nfc')} description={t('admin.nfc.subtitle')} />
             </div>
 
             <p className="mt-10 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-xs leading-relaxed text-gray-600">

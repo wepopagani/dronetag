@@ -2,8 +2,7 @@
 
 /**
  * Sub-nav for the admin section, rendered by individual admin pages
- * underneath the page title. Keeps every admin route discoverable in one
- * place without forcing the legacy `/admin/profiles/...` flow to use it.
+ * underneath the page title.
  */
 
 import Link from 'next/link';
@@ -23,7 +22,6 @@ export function AdminSubNav() {
     { href: '/admin/verify', label: t('admin.nav.verify'), match: (p: string) => p.startsWith('/admin/verify') },
     { href: '/admin/plans', label: t('admin.nav.plans'), match: (p: string) => p.startsWith('/admin/plans') },
     { href: '/admin/nfc', label: t('admin.nav.nfc'), match: (p: string) => p.startsWith('/admin/nfc') },
-    { href: '/admin/profiles', label: t('admin.nav.legacy'), match: (p: string) => p.startsWith('/admin/profiles') },
   ];
 
   return (

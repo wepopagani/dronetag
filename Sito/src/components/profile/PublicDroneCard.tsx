@@ -104,6 +104,19 @@ function insuranceBannerKey(status: PolicyStatus): string {
   }
 }
 
+function certificateBadgeKey(status: VerificationStatus): string {
+  switch (status) {
+    case 'verified':
+      return 'publicDrone.certificatesVerified';
+    case 'pending':
+      return 'publicDrone.certificatesPending';
+    case 'rejected':
+      return 'publicDrone.certificatesRejected';
+    default:
+      return 'publicDrone.certificatesUnverified';
+  }
+}
+
 // ─── Page-level helpers exported for the wrapper ──────────────────────────
 
 export type PublicDroneCardProps = {
@@ -134,52 +147,37 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
 
   return (
     <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-lg">
-      {/* ── Header + account branding ──────────────────────────────────── */}
-      <div className="relative">
-        <div className="relative h-36 w-full overflow-hidden sm:h-44">
-          {hasUrl(snapshot.bannerUrl) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={snapshot.bannerUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="h-full w-full bg-gradient-to-br from-slate-800 via-slate-900 to-gray-950" aria-hidden />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" aria-hidden />
+      {/* ── Banner (branding only) ───────────────────────────────────── */}
+      <div className="relative h-28 w-full overflow-hidden sm:h-32">
+        {hasUrl(snapshot.bannerUrl) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={snapshot.bannerUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            className="h-full w-full object-cover"
+          />
+        ) : (
+          <div className="h-full w-full bg-gradient-to-br from-slate-800 via-slate-900 to-gray-950" aria-hidden />
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" aria-hidden />
 
-          {hasUrl(snapshot.logoUrl) ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={snapshot.logoUrl}
-              alt=""
-              referrerPolicy="no-referrer"
-              loading="lazy"
-              className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:h-12 sm:w-12"
-            />
-          ) : null}
+        {hasUrl(snapshot.logoUrl) ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={snapshot.logoUrl}
+            alt=""
+            referrerPolicy="no-referrer"
+            loading="lazy"
+            className="absolute right-4 top-4 h-10 w-10 rounded-lg border border-white/20 bg-white object-contain p-0.5 shadow-lg sm:h-12 sm:w-12"
+          />
+        ) : null}
+      </div>
 
-          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-5 pb-4 sm:px-6">
-            <div className="min-w-0">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/60">
-                {t('publicDrone.eyebrow')}
-              </p>
-              <h1 className="mt-1 text-xl font-bold tracking-tight text-white drop-shadow-sm sm:text-2xl">
-                {[snapshot.manufacturer, snapshot.model].filter(Boolean).join(' ').trim() ||
-                  t('common.notAvailable')}
-              </h1>
-              <p className="mt-1 text-xs text-white/80">
-                {t(holderRoleKey(snapshot.holderKind))}:{' '}
-                <strong>{snapshot.holderDisplayName}</strong>
-              </p>
-            </div>
-          </div>
-        </div>
-
-        <div className="absolute -bottom-10 left-5 z-10 sm:left-6">
+      {/* ── Operator / pilot identity (always above the fold) ─────────── */}
+      <div className="border-b border-gray-100 bg-white px-5 py-4 sm:px-6">
+        <div className="flex items-start gap-4">
           {hasUrl(snapshot.profilePhotoUrl) ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -187,21 +185,37 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
               alt=""
               referrerPolicy="no-referrer"
               loading="lazy"
-              className="h-20 w-20 rounded-xl border-[3px] border-white bg-white object-cover shadow-lg"
+              className="h-20 w-20 shrink-0 rounded-xl border border-gray-200 bg-gray-50 object-cover shadow-sm sm:h-24 sm:w-24"
             />
           ) : (
             <div
-              className="flex h-20 w-20 items-center justify-center rounded-xl border-[3px] border-white bg-slate-800 text-lg font-bold tracking-wide text-white shadow-lg"
+              className="flex h-20 w-20 shrink-0 items-center justify-center rounded-xl border border-gray-200 bg-slate-800 text-xl font-bold tracking-wide text-white shadow-sm sm:h-24 sm:w-24"
               aria-hidden
             >
               {holderInitials(snapshot.holderDisplayName)}
             </div>
           )}
+
+          <div className="min-w-0 flex-1 pt-0.5">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-gray-400">
+              {t('publicDrone.eyebrow')}
+            </p>
+            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wide text-sky-700">
+              {t(holderRoleKey(snapshot.holderKind))}
+            </p>
+            <h1 className="mt-0.5 text-xl font-bold leading-tight tracking-tight text-gray-900 sm:text-2xl">
+              {snapshot.holderDisplayName}
+            </h1>
+            <p className="mt-1.5 text-sm font-medium text-gray-600 sm:text-base">
+              {[snapshot.manufacturer, snapshot.model].filter(Boolean).join(' ').trim() ||
+                t('common.notAvailable')}
+            </p>
+          </div>
         </div>
       </div>
 
       {/* ── Status row ─ outdoors-readable badges (STAGING-OPS-1) ─────── */}
-      <div className="flex flex-wrap items-center gap-2 px-5 pb-3 pl-28 pt-3 sm:px-6 sm:pl-[7.5rem]">
+      <div className="flex flex-wrap items-center gap-2 px-5 py-3 sm:px-6">
         <span
           className={classNames(
             'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm font-semibold ring-1 ring-inset',
@@ -210,7 +224,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
           )}
         >
           <span className={classNames('h-2.5 w-2.5 rounded-full', verification.dot)} aria-hidden />
-          {t(`verification.${snapshot.verificationStatus}`)}
+          {t(certificateBadgeKey(snapshot.verificationStatus))}
         </span>
         <span
           className={classNames(
@@ -254,6 +268,10 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
       </div>
 
       {/* ── Sections ──────────────────────────────────────────────────── */}
+      <Section title={t('publicDrone.holderSection')} icon={<IconUser />}>
+        <DataRow label={t(holderRoleKey(snapshot.holderKind))} value={snapshot.holderDisplayName} />
+      </Section>
+
       <Section title={t('public.droneInformation')} icon={<IconDrone />}>
         <DataRow label={t('drone.field.manufacturer')} value={snapshot.manufacturer} />
         <DataRow label={t('drone.field.model')} value={snapshot.model} />
@@ -297,7 +315,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
       <Section title={t('public.verificationRecord')} icon={<IconClipboard />}>
         <DataRow
           label={t('verification.status')}
-          value={t(`verification.${snapshot.verificationStatus}`)}
+          value={t(certificateBadgeKey(snapshot.verificationStatus))}
         />
         {snapshot.lastVerifiedAt ? (
           <DataRow
@@ -402,6 +420,14 @@ function IconDrone() {
   return (
     <svg viewBox="0 0 20 20" fill="currentColor" className="h-[14px] w-[14px]" aria-hidden>
       <path d="M15.98 1.804a1 1 0 00-1.96 0l-.24 1.192a1 1 0 01-.784.785l-1.192.238a1 1 0 000 1.962l1.192.238a1 1 0 01.785.785l.238 1.192a1 1 0 001.962 0l.238-1.192a1 1 0 01.785-.785l1.192-.238a1 1 0 000-1.962l-1.192-.238a1 1 0 01-.785-.785l-.238-1.192zM6.95 5.684a1 1 0 00-1.9 0l-.683 2.051a1 1 0 01-.633.633l-2.052.683a1 1 0 000 1.898l2.052.683a1 1 0 01.633.633l.683 2.051a1 1 0 001.898 0l.683-2.051a1 1 0 01.633-.633l2.052-.683a1 1 0 000-1.898l-2.052-.683a1 1 0 01-.633-.633L6.95 5.684z" />
+    </svg>
+  );
+}
+
+function IconUser() {
+  return (
+    <svg viewBox="0 0 20 20" fill="currentColor" className="h-[14px] w-[14px]" aria-hidden>
+      <path d="M10 8a3 3 0 100-6 3 3 0 000 6zM3.465 14.493a1.23 1.23 0 00.41 1.412A9.957 9.957 0 0010 18c2.31 0 4.438-.784 6.131-2.1.43-.333.604-.903.408-1.41a7.002 7.002 0 00-13.074.003z" />
     </svg>
   );
 }

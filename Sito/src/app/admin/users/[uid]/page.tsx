@@ -25,6 +25,7 @@ import { listDronesByUser, clearActiveOperator } from '@/lib/firebase/drones';
 import { listInsurances, updateInsurance } from '@/lib/firebase/insurances';
 import { listCertificates, updateCertificate } from '@/lib/firebase/certificates';
 import { listDocuments, updateDocument } from '@/lib/firebase/documents';
+import { requestPublicDroneResync } from '@/lib/client/resyncPublicDrones';
 import { ensureSlots, setSlots } from '@/lib/firebase/slots';
 import type { AccountType, UserAccount } from '@/lib/types/account';
 import type {
@@ -122,6 +123,7 @@ export default function AdminUserDetailPage() {
     setInsurances(iList);
     setCertificates(cList);
     setDocuments(docList);
+    await requestPublicDroneResync(uid);
   }, [uid]);
 
   useEffect(() => {

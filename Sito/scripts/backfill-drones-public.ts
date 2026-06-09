@@ -34,12 +34,14 @@ import {
   computePolicyStatus,
 } from '../src/lib/utils';
 import {
+  deriveCertificateVerification,
   effectiveOperatorId,
   operatorDisplayName,
   pilotDisplayName,
 } from '../src/lib/utils/entities';
 import { maskPolicyNumber } from '../src/lib/utils/publicProjection';
 import type {
+  Certificate,
   Drone,
   DroneClass,
   DronePublicSnapshot,
@@ -142,11 +144,12 @@ async function main() {
 
     // Resolve linked entities. Each is a doc lookup; the script runs as
     // an admin so it can read across users.
-    const [opSnap, pilotSnap, insSnap, userSnap] = await Promise.all([
+    const [opSnap, pilotSnap, insSnap, userSnap, certSnap] = await Promise.all([
       effOpId ? getDoc(doc(db, 'operators', effOpId)) : Promise.resolve(null),
       drone.linkedPilotId ? getDoc(doc(db, 'pilots', drone.linkedPilotId)) : Promise.resolve(null),
       drone.insuranceId ? getDoc(doc(db, 'insurances', drone.insuranceId)) : Promise.resolve(null),
       getDoc(doc(db, 'users', drone.userId)),
+      getDocs(fsQuery(collection(db, 'certificates'), where('userId', '==', drone.userId))),
     ]);
     const op = opSnap && opSnap.exists() ? (opSnap.data() as unknown as Operator) : null;
     const pilot = pilotSnap && pilotSnap.exists() ? (pilotSnap.data() as unknown as Pilot) : null;
@@ -164,12 +167,31 @@ async function main() {
       holderDisplayName = pilotDisplayName(pilot);
     }
     const insuranceStatus: PolicyStatus = insurance ? computePolicyStatus(insurance) : 'missing';
+    const certificates: Certificate[] = certSnap.docs.map((d) => {
+      const c = d.data() as Record<string, unknown>;
+      return {
+        id: d.id,
+        userId: asString(c['userId']),
+        kind: (asString(c['kind']) || 'custom') as Certificate['kind'],
+        label: asString(c['label']),
+        registrationNumber: asString(c['registrationNumber']),
+        issuedBy: asString(c['issuedBy']),
+        issuedAt: asString(c['issuedAt']),
+        expiresAt: asString(c['expiresAt']),
+        fileUrl: asString(c['fileUrl']),
+        verificationStatus: (asString(c['verificationStatus']) || 'unverified') as VerificationStatus,
+        notes: asString(c['notes']),
+        createdAt: asString(c['createdAt']),
+        updatedAt: asString(c['updatedAt']),
+      };
+    });
+    const certVerification = deriveCertificateVerification(certificates);
 
     const snapshot: DronePublicSnapshot = {
       slug: drone.slug,
       droneId: drone.id,
-      verificationStatus: drone.verificationStatus,
-      lastVerifiedAt: drone.lastVerifiedAt,
+      verificationStatus: certVerification.status,
+      lastVerifiedAt: certVerification.lastVerifiedAt,
       publishedAt: drone.publishedAt,
       holderKind,
       holderDisplayName,

@@ -5,8 +5,9 @@
  * are not affected and the new code path stays explicit.
  */
 
-import type { Drone, Operator, Pilot } from '@/lib/types/entities';
+import type { Certificate, Drone, Operator, Pilot } from '@/lib/types/entities';
 import type { UserAccount } from '@/lib/types/account';
+import type { VerificationStatus } from '@/lib/types';
 
 // ─── Drone slug generation ─────────────────────────────────────────────────
 
@@ -113,4 +114,36 @@ export function accountDisplayName(a: UserAccount): string {
     return a.companyName.trim() || a.email || '—';
   }
   return `${a.firstName} ${a.lastName}`.trim() || a.email || '—';
+}
+
+// ─── Certificate verification (public badge) ───────────────────────────────
+
+/**
+ * Aggregate admin verification state from a user's uploaded certificates
+ * (attestati). The public drone badge reflects this — not the manual
+ * `drone.verificationStatus` field nor insurance coverage.
+ */
+export function deriveCertificateVerification(
+  certificates: Certificate[],
+): { status: VerificationStatus; lastVerifiedAt: string } {
+  if (certificates.length === 0) {
+    return { status: 'unverified', lastVerifiedAt: '' };
+  }
+
+  const statuses = certificates.map((c) => c.verificationStatus);
+  if (statuses.some((s) => s === 'verified')) {
+    const lastVerifiedAt = certificates
+      .filter((c) => c.verificationStatus === 'verified')
+      .map((c) => c.updatedAt)
+      .sort()
+      .reverse()[0] ?? '';
+    return { status: 'verified', lastVerifiedAt };
+  }
+  if (statuses.some((s) => s === 'pending')) {
+    return { status: 'pending', lastVerifiedAt: '' };
+  }
+  if (statuses.every((s) => s === 'rejected')) {
+    return { status: 'rejected', lastVerifiedAt: '' };
+  }
+  return { status: 'unverified', lastVerifiedAt: '' };
 }

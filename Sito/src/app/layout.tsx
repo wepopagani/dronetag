@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
-import { Navbar } from '@/components/layout/Navbar';
+import { AppShell } from '@/components/layout/AppShell';
 import { ServiceWorkerCleanup } from '@/components/system/ServiceWorkerCleanup';
 import './globals.css';
 
@@ -53,8 +53,7 @@ export default function RootLayout({
         <ServiceWorkerCleanup />
         <AuthProvider>
           <LanguageProvider>
-            <Navbar />
-            <main className="min-h-screen pt-16">{children}</main>
+            <AppShell>{children}</AppShell>
           </LanguageProvider>
         </AuthProvider>
       </body>

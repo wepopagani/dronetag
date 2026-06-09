@@ -1,18 +1,11 @@
 'use client';
 
 /**
- * Documents dashboard page.
- *
- * - Slot-enforced via `slots.pdf`.
- * - Each row shows a thumbnail/preview affordance for PDFs (using the
- *   existing PDFPreview component when the user opens the inline preview).
- * - In M2 the "upload" mechanism is a URL paste; full storage upload is
- *   wired in M5 alongside the admin verification queue. The URL hint
- *   guides the user to paste a Firebase Storage / signed URL.
+ * Documents dashboard page — upload PDFs/images via drag-and-drop (Admin SDK).
  */
 
-import { useEffect, useMemo, useState } from 'react';
-import type { ChangeEvent, FormEvent } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -20,59 +13,40 @@ import {
   deleteDocument,
   listDocuments,
   updateDocument,
+  uploadDocumentFile,
 } from '@/lib/firebase/documents';
 import { ensureSlots } from '@/lib/firebase/slots';
-import type {
-  DocumentKind,
-  DocumentRef,
-  Slots,
-} from '@/lib/types/entities';
-import { isAllowedFileUrl } from '@/lib/utils/urlAllowlist';
+import type { DocumentRef, Slots } from '@/lib/types/entities';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
 import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
-import { Select } from '@/components/ui/Select';
 import { Textarea } from '@/components/ui/Textarea';
+import { UploadField } from '@/components/ui/UploadField';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { ConfirmDialog } from '@/components/account/ConfirmDialog';
 import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { EntityPdfPreviewModal } from '@/components/account/EntityPdfPreviewModal';
 
-const DOCUMENT_KINDS: { value: DocumentKind; labelKey: string }[] = [
-  { value: 'insurance_policy', labelKey: 'doc.kind.insurance_policy' },
-  { value: 'operator_license', labelKey: 'doc.kind.operator_license' },
-  { value: 'drone_registration', labelKey: 'doc.kind.drone_registration' },
-  { value: 'training_certificate', labelKey: 'doc.kind.training_certificate' },
-  { value: 'identity', labelKey: 'doc.kind.identity' },
-  { value: 'other', labelKey: 'doc.kind.other' },
-];
-
 interface DocFormState {
-  kind: DocumentKind;
   label: string;
   fileUrl: string;
-  fileName: string;
   notes: string;
 }
 
 const EMPTY_FORM: DocFormState = {
-  kind: 'other',
   label: '',
   fileUrl: '',
-  fileName: '',
   notes: '',
 };
 
-const URL_RX = /^https?:\/\/.+$/i;
+const FILE_ACCEPT = '.pdf,application/pdf,image/png,image/jpeg,image/webp';
 
 function docToForm(d: DocumentRef): DocFormState {
   return {
-    kind: d.kind,
     label: d.label,
     fileUrl: d.fileUrl,
-    fileName: d.fileName,
     notes: d.notes,
   };
 }
@@ -122,34 +96,44 @@ export default function AccountDocumentsPage() {
   const cap = slots?.pdf ?? 1;
   const atCap = documents.length >= cap;
 
-  async function handleSave(form: DocFormState, target: DocumentRef | null) {
+  async function handleSave(form: DocFormState, target: DocumentRef | null, pendingFile: File | null) {
     if (!user) return;
     setSavingId(target?.id ?? 'new');
     setSaveError(null);
     try {
-      const inferredMime = form.fileUrl.toLowerCase().endsWith('.pdf') ? 'application/pdf' : '';
+      const label = form.label.trim() || pendingFile?.name.replace(/\.[^.]+$/, '') || target?.label || t('doc.kind.other');
       const payload = {
         userId: user.uid,
-        kind: form.kind,
-        label: form.label || t(DOCUMENT_KINDS.find((k) => k.value === form.kind)?.labelKey ?? 'doc.kind.other'),
-        fileUrl: form.fileUrl,
-        fileName: form.fileName || guessFileName(form.fileUrl),
-        fileSize: target?.fileSize ?? 0,
-        mimeType: target?.mimeType || inferredMime,
+        kind: 'other' as const,
+        label,
+        fileUrl: pendingFile ? '' : form.fileUrl,
+        fileName: pendingFile?.name ?? target?.fileName ?? '',
+        fileSize: pendingFile?.size ?? target?.fileSize ?? 0,
+        mimeType: pendingFile?.type ?? target?.mimeType ?? '',
         verificationStatus: target?.verificationStatus ?? 'unverified',
         notes: form.notes,
-      } as const;
+      };
+
+      let documentId = target?.id;
       if (target) {
         await updateDocument(target.id, payload);
       } else {
-        await createDocument(payload);
+        documentId = await createDocument(payload);
       }
+
+      if (pendingFile && documentId) {
+        await uploadDocumentFile(documentId, pendingFile);
+      }
+
       await reload();
       setCreating(false);
       setEditing(null);
     } catch (err) {
       console.error('[documents] save failed', err);
-      setSaveError(err instanceof Error ? err.message : t('account.saveError'));
+      const msg = err instanceof Error ? err.message : '';
+      setSaveError(
+        msg === 'storage_billing_required' ? t('account.storageBillingRequired') : (msg || t('account.saveError')),
+      );
     } finally {
       setSavingId(null);
     }
@@ -196,19 +180,14 @@ export default function AccountDocumentsPage() {
               <Card padding="md">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-base font-semibold text-gray-900">
-                        {d.label || t(DOCUMENT_KINDS.find((k) => k.value === d.kind)?.labelKey ?? 'doc.kind.other')}
-                      </h3>
-                      <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-700">
-                        {t(DOCUMENT_KINDS.find((k) => k.value === d.kind)?.labelKey ?? 'doc.kind.other')}
-                      </span>
-                    </div>
+                    <h3 className="text-base font-semibold text-gray-900">
+                      {d.label || t('doc.kind.other')}
+                    </h3>
                     {d.fileName ? (
                       <p className="mt-1 truncate font-mono text-[11px] text-gray-500">{d.fileName}</p>
                     ) : null}
-                    {d.fileUrl ? (
-                      <p className="mt-1 truncate text-[11px] text-blue-600">{d.fileUrl}</p>
+                    {d.notes ? (
+                      <p className="mt-1 line-clamp-2 text-xs text-gray-500">{d.notes}</p>
                     ) : null}
                   </div>
                   <div className="flex shrink-0 items-center gap-2">
@@ -236,7 +215,7 @@ export default function AccountDocumentsPage() {
           target={editing}
           saving={savingId === (editing?.id ?? 'new')}
           onClose={() => { setCreating(false); setEditing(null); }}
-          onSubmit={(form) => handleSave(form, editing)}
+          onSubmit={(form, pendingFile) => handleSave(form, editing, pendingFile)}
         />
       ) : null}
 
@@ -260,17 +239,6 @@ export default function AccountDocumentsPage() {
   );
 }
 
-function guessFileName(url: string): string {
-  if (!url) return '';
-  try {
-    const parsed = new URL(url);
-    const last = parsed.pathname.split('/').filter(Boolean).pop() ?? '';
-    return decodeURIComponent(last);
-  } catch {
-    return '';
-  }
-}
-
 // ─── Form modal ───────────────────────────────────────────────────────────
 
 function DocFormModal({
@@ -284,28 +252,51 @@ function DocFormModal({
   target: DocumentRef | null;
   saving: boolean;
   onClose: () => void;
-  onSubmit: (form: DocFormState) => void;
+  onSubmit: (form: DocFormState, pendingFile: File | null) => void;
 }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<DocFormState>(() =>
     target ? docToForm(target) : EMPTY_FORM,
   );
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string>(() => form.fileUrl);
+  const blobUrlRef = useRef<string | null>(null);
+
+  useEffect(() => () => {
+    if (blobUrlRef.current) URL.revokeObjectURL(blobUrlRef.current);
+  }, []);
 
   function setField<K extends keyof DocFormState>(k: K, v: DocFormState[K]) {
     setForm((p) => ({ ...p, [k]: v }));
     if (errors[k as string]) setErrors((e) => ({ ...e, [k]: undefined }));
   }
 
+  function handleFileUpload(file: File) {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    const blobUrl = URL.createObjectURL(file);
+    blobUrlRef.current = blobUrl;
+    setPendingFile(file);
+    setFilePreviewUrl(blobUrl);
+    if (errors.file) setErrors((e) => ({ ...e, file: undefined }));
+  }
+
+  function handleFileRemove() {
+    if (blobUrlRef.current) {
+      URL.revokeObjectURL(blobUrlRef.current);
+      blobUrlRef.current = null;
+    }
+    setPendingFile(null);
+    setFilePreviewUrl(target?.fileUrl ?? '');
+  }
+
   function validate(): Record<string, string> {
     const e: Record<string, string> = {};
-    if (!form.fileUrl.trim()) {
-      e.fileUrl = t('form.validation.required');
-    } else if (!URL_RX.test(form.fileUrl)) {
-      e.fileUrl = t('form.errors.invalidUrl');
-    } else if (!isAllowedFileUrl(form.fileUrl)) {
-      e.fileUrl = t('form.errors.urlNotAllowed');
-    }
+    const hasFile = Boolean(pendingFile || form.fileUrl.trim());
+    if (!hasFile) e.file = t('form.validation.required');
     return e;
   }
 
@@ -314,7 +305,7 @@ function DocFormModal({
     const v = validate();
     setErrors(v);
     if (Object.keys(v).length > 0) return;
-    onSubmit(form);
+    onSubmit(form, pendingFile);
   }
 
   return (
@@ -325,40 +316,37 @@ function DocFormModal({
     >
       <form onSubmit={handleSubmit} noValidate className="space-y-4">
         <FormErrorBanner show={Object.keys(errors).length > 0} />
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <Select
-            label={t('doc.field.kind')} name="kind"
-            value={form.kind}
-            onChange={(e: ChangeEvent<HTMLSelectElement>) =>
-              setField('kind', e.target.value as DocumentKind)
-            }
-            options={DOCUMENT_KINDS.map((k) => ({ value: k.value, label: t(k.labelKey) }))}
+
+        <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+          <UploadField
+            label={t('doc.field.file')}
+            accept={FILE_ACCEPT}
+            currentUrl={filePreviewUrl || undefined}
+            onUpload={handleFileUpload}
+            onRemove={filePreviewUrl ? handleFileRemove : undefined}
+            preview
+            required
           />
-          <Input
-            label={t('doc.field.label')} name="label"
-            value={form.label}
-            onChange={(e) => setField('label', e.target.value)}
-          />
-          <Input
-            label={t('doc.field.fileUrl')} name="fileUrl" required
-            value={form.fileUrl}
-            onChange={(e) => setField('fileUrl', e.target.value)}
-            error={errors.fileUrl}
-            className="sm:col-span-2"
-          />
-          <p className="text-xs text-gray-500 sm:col-span-2 -mt-2">{t('doc.urlHint')}</p>
-          <Input
-            label={t('doc.field.fileName')} name="fileName"
-            value={form.fileName}
-            onChange={(e) => setField('fileName', e.target.value)}
-          />
-          <Textarea
-            label={t('doc.field.notes')} name="notes"
-            value={form.notes}
-            onChange={(e) => setField('notes', e.target.value)}
-            className="sm:col-span-2"
-          />
+          {errors.file ? (
+            <p className="mt-2 text-xs text-red-600">{errors.file}</p>
+          ) : null}
         </div>
+
+        <Input
+          label={t('doc.field.label')}
+          name="label"
+          value={form.label}
+          onChange={(e) => setField('label', e.target.value)}
+          placeholder={t('doc.field.labelHint')}
+        />
+
+        <Textarea
+          label={t('doc.field.notes')}
+          name="notes"
+          value={form.notes}
+          onChange={(e) => setField('notes', e.target.value)}
+        />
+
         <div className="flex flex-wrap items-center justify-end gap-2 pt-1">
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             {t('common.cancel')}

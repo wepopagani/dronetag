@@ -2,6 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -13,9 +14,11 @@ import { classNames } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 
 export function Navbar() {
+  const pathname = usePathname();
   const { user, isAdmin } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const inAdmin = pathname.startsWith('/admin');
 
   const navLinkClass =
     'rounded-lg px-3 py-2 text-sm font-medium text-gray-600 transition hover:bg-gray-100 hover:text-gray-900';
@@ -104,9 +107,11 @@ export function Navbar() {
                   {t('nav.dashboard')}
                 </Link>
               ) : null}
-              <Link href="/account" className={navLinkClass} onClick={() => setMobileOpen(false)}>
-                {t('nav.account')}
-              </Link>
+              {!inAdmin ? (
+                <Link href="/account" className={navLinkClass} onClick={() => setMobileOpen(false)}>
+                  {t('nav.account')}
+                </Link>
+              ) : null}
               <div className="px-3 md:px-0">
                 <Button
                   type="button"

@@ -93,6 +93,26 @@ export async function createDocument(
   return body.id;
 }
 
+/** Upload document file (PDF or image) via Admin SDK. */
+export async function uploadDocumentFile(documentId: string, file: File): Promise<string> {
+  if (DEMO_MODE) {
+    await new Promise((r) => setTimeout(r, 300));
+    return URL.createObjectURL(file);
+  }
+  const form = new FormData();
+  form.append('file', file);
+  const res = await adminFetch(`/api/entities/documents/${documentId}/file`, {
+    method: 'POST',
+    body: form,
+  });
+  const body = (await res.json().catch(() => ({}))) as { fileUrl?: string; error?: string };
+  if (!res.ok) {
+    throw new Error(body.error || `upload document failed (${res.status})`);
+  }
+  if (!body.fileUrl) throw new Error('upload document failed: missing fileUrl');
+  return body.fileUrl;
+}
+
 export async function updateDocument(id: string, patch: Partial<DocumentRef>): Promise<void> {
   if (DEMO_MODE) return demo.updateDocument(id, patch);
   await awaitFirebaseAuthReady();

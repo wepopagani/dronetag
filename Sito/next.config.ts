@@ -192,6 +192,20 @@ const nextConfig: NextConfig = {
   async headers() {
     return [{ source: '/:path*', headers: securityHeaders }];
   },
+  async redirects() {
+    return [
+      {
+        source: '/admin/profiles',
+        destination: '/admin/users',
+        permanent: false,
+      },
+      {
+        source: '/admin/profiles/:path*',
+        destination: '/admin/users',
+        permanent: false,
+      },
+    ];
+  },
   // PR-SEC-3 V-020: configure remotePatterns so the optimised image
   // pipeline (next/image) accepts Firebase Storage URLs out of the
   // box. Currently we render legacy public-profile images via raw

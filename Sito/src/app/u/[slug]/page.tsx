@@ -33,7 +33,6 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { PublicDroneCard } from '@/components/profile/PublicDroneCard';
 import { getDronePublicBySlug } from '@/lib/firebase/dronesPublic';
-import { LANGUAGES, type Language } from '@/lib/types';
 import type { DronePublicSnapshot } from '@/lib/types/entities';
 
 // ─── State machine ──────────────────────────────────────────────────────────
@@ -105,7 +104,7 @@ export default function PublicProfilePage() {
     ? rawSlug[0]
     : '';
 
-  const { t, language, setLanguage } = useLanguage();
+  const { t, language } = useLanguage();
   const { loading: authLoading } = useAuth();
 
   const [result, setResult] = useState<Resolved | null>(null);
@@ -141,25 +140,7 @@ export default function PublicProfilePage() {
   const value = fresh ? result.value : null;
 
   return (
-    <div className="min-h-[calc(100vh-3.5rem)] bg-gray-100/70">
-      {/* Top bar */}
-      <div className="border-b border-gray-200 bg-white/80 backdrop-blur-sm">
-        <div className="mx-auto flex max-w-2xl items-center justify-between px-4 py-2.5 sm:px-6">
-          <span className="text-xs font-semibold tracking-wide text-gray-400">DRONETAG</span>
-          <label className="sr-only" htmlFor="public-lang">{t('common.language')}</label>
-          <select
-            id="public-lang"
-            value={language}
-            onChange={(e) => setLanguage(e.target.value as Language)}
-            className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs text-gray-600 outline-none transition focus:border-gray-400 focus:ring-1 focus:ring-gray-400/20"
-          >
-            {LANGUAGES.map((l) => (
-              <option key={l.value} value={l.value}>{l.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
+    <>
       {/* Content */}
       <div className="mx-auto max-w-2xl px-4 py-6 sm:px-6 sm:py-8">
         {isLoading || !value ? (
@@ -181,6 +162,6 @@ export default function PublicProfilePage() {
           />
         )}
       </div>
-    </div>
+    </>
   );
 }
