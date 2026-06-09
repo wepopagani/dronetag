@@ -1,24 +1,95 @@
 'use client';
 
+import { useEffect, useRef, useState } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { getPdfjs, loadPdfBytes } from '@/lib/pdf/loadPdfBytes';
 import { classNames } from '@/lib/utils';
 
 export type PDFPreviewProps = {
   url: string;
   label?: string;
+  /** Shorter canvas stack for inline form fields. */
+  compact?: boolean;
 };
 
-export function PDFPreview({ url, label }: PDFPreviewProps) {
+type LoadState =
+  | { kind: 'idle' }
+  | { kind: 'loading' }
+  | { kind: 'ready' }
+  | { kind: 'error'; message: string };
+
+export function PDFPreview({ url, label, compact = false }: PDFPreviewProps) {
   const { t } = useLanguage();
+  const [state, setState] = useState<LoadState>({ kind: 'idle' });
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const hasUrl = Boolean(url?.trim());
   const displayLabel = label || t('field.policyPdf');
+  const maxHeight = compact ? 'max-h-56' : 'max-h-[min(70vh,520px)]';
+
+  useEffect(() => {
+    if (!hasUrl) {
+      setState({ kind: 'idle' });
+      return;
+    }
+
+    let cancelled = false;
+    const container = containerRef.current;
+    if (!container) return;
+
+    setState({ kind: 'loading' });
+    container.replaceChildren();
+
+    (async () => {
+      try {
+        const pdfjs = await getPdfjs();
+        const data = await loadPdfBytes(url);
+        if (cancelled) return;
+
+        const doc = await pdfjs.getDocument({ data }).promise;
+        if (cancelled) return;
+
+        const scale = compact ? 1.1 : 1.35;
+        for (let pageNum = 1; pageNum <= doc.numPages; pageNum += 1) {
+          if (cancelled) return;
+          const page = await doc.getPage(pageNum);
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          canvas.className = 'mx-auto block w-full max-w-full bg-white shadow-sm';
+          if (pageNum > 1) canvas.className += ' mt-2';
+
+          const ctx = canvas.getContext('2d');
+          if (!ctx) throw new Error('canvas unavailable');
+
+          await page.render({ canvasContext: ctx, viewport, canvas }).promise;
+          if (cancelled) return;
+          container.appendChild(canvas);
+        }
+
+        if (!cancelled) setState({ kind: 'ready' });
+      } catch (err) {
+        if (!cancelled) {
+          setState({
+            kind: 'error',
+            message: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [url, hasUrl, compact]);
 
   if (!hasUrl) {
     return (
       <div
         className={classNames(
           'flex flex-col items-center justify-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-6 py-10 text-center',
-          'max-h-[400px]'
+          maxHeight,
         )}
       >
         <svg className="h-12 w-12 text-gray-300" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -31,30 +102,36 @@ export function PDFPreview({ url, label }: PDFPreviewProps) {
 
   return (
     <div className="space-y-3">
-      <div className="overflow-hidden rounded-lg border border-gray-200 bg-gray-100 shadow-sm">
-        {/*
-          V-018: PDF previews load user-controlled URLs. Without
-          `sandbox`, a malicious PDF host could navigate the parent
-          window or run scripts in this origin. We allow only:
-            • `allow-scripts`  — required by browsers' built-in PDF
-              viewers (PDF.js, Edge viewer) to render.
-            • `allow-popups`   — lets "Open in new tab" inside the
-              viewer work for users who want it.
-          We deliberately omit `allow-same-origin` (script runs in an
-          opaque origin → no cookies / parent access) and
-          `allow-top-navigation` (cannot redirect the parent).
-          `referrerPolicy="no-referrer"` (V-020 hardening) prevents
-          the storage host from learning which page embedded it.
-        */}
-        <iframe
-          title={displayLabel}
-          src={url}
-          className="h-[400px] max-h-[400px] w-full border-0"
-          sandbox="allow-scripts allow-popups"
-          referrerPolicy="no-referrer"
-          loading="lazy"
-        />
+      <div
+        className={classNames(
+          'overflow-y-auto overflow-x-hidden rounded-lg border border-gray-200 bg-gray-100 p-2 shadow-sm',
+          maxHeight,
+        )}
+      >
+        {state.kind === 'loading' ? (
+          <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 py-10 text-sm text-gray-500">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-gray-300 border-t-gray-600" />
+            {t('common.pdfPreviewLoading')}
+          </div>
+        ) : null}
+
+        {state.kind === 'error' ? (
+          <div className="flex min-h-[200px] flex-col items-center justify-center gap-2 px-4 py-10 text-center text-sm text-gray-600">
+            <p>{t('common.pdfPreviewFailed')}</p>
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-medium text-blue-600 underline-offset-2 hover:underline"
+            >
+              {t('common.viewDocument')}
+            </a>
+          </div>
+        ) : null}
+
+        <div ref={containerRef} className={state.kind === 'ready' ? '' : 'sr-only'} aria-hidden={state.kind !== 'ready'} />
       </div>
+
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-gray-100 bg-white px-4 py-3 shadow-sm">
         <div className="flex items-center gap-3">
           <svg className="h-9 w-9 shrink-0 text-red-600" fill="currentColor" viewBox="0 0 24 24" aria-hidden>
@@ -62,7 +139,12 @@ export function PDFPreview({ url, label }: PDFPreviewProps) {
           </svg>
           <div className="min-w-0 text-left">
             <p className="text-sm font-medium text-gray-900">{displayLabel}</p>
-            <a href={url} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 underline-offset-2 hover:underline">
+            <a
+              href={url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-blue-600 underline-offset-2 hover:underline"
+            >
               {t('common.viewDocument')}
             </a>
           </div>

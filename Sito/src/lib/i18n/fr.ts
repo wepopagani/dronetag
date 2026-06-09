@@ -315,6 +315,8 @@ export const translations: TranslationMap = {
   'common.filtersActive': '{count} filtre(s) actif(s)',
   'common.clearFilters': 'Effacer tous les filtres',
   'common.noDocument': 'Aucun document t\u00e9l\u00e9vers\u00e9',
+  'common.pdfPreviewLoading': 'Chargement de l\u2019aper\u00e7u PDF…',
+  'common.pdfPreviewFailed': 'Aper\u00e7u indisponible. Ouvrez le document dans un nouvel onglet.',
   'common.noQr': 'Aucun code QR t\u00e9l\u00e9vers\u00e9',
 
   // ── Policy descriptions (dynamic) ──

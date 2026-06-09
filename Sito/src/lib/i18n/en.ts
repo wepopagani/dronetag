@@ -324,6 +324,8 @@ export const translations = {
   'common.filtersActive': '{count} filter(s) active',
   'common.clearFilters': 'Clear all filters',
   'common.noDocument': 'No document uploaded',
+  'common.pdfPreviewLoading': 'Loading PDF preview…',
+  'common.pdfPreviewFailed': 'Preview unavailable. Open the document in a new tab.',
   'common.noQr': 'No QR code uploaded',
 
   // ── Policy descriptions (dynamic) ──

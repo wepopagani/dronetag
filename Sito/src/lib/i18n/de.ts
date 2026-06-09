@@ -315,6 +315,8 @@ export const translations: TranslationMap = {
   'common.filtersActive': '{count} Filter aktiv',
   'common.clearFilters': 'Alle Filter zur\u00fccksetzen',
   'common.noDocument': 'Kein Dokument hochgeladen',
+  'common.pdfPreviewLoading': 'PDF-Vorschau wird geladen…',
+  'common.pdfPreviewFailed': 'Vorschau nicht verfügbar. Dokument in neuem Tab öffnen.',
   'common.noQr': 'Kein QR-Code hochgeladen',
 
   // ── Policy descriptions (dynamic) ──

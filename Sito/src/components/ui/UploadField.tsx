@@ -9,6 +9,7 @@ import {
 } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { classNames } from '@/lib/utils';
+import { PDFPreview } from '@/components/ui/PDFPreview';
 
 function filenameFromUrl(url: string): string {
   try {
@@ -26,8 +27,11 @@ function isLikelyImageUrl(url: string): boolean {
 }
 
 function isLikelyPdfUrl(url: string): boolean {
-  const lower = url.toLowerCase().split('?')[0] ?? '';
-  return lower.endsWith('.pdf') || url.toLowerCase().includes('application/pdf');
+  try {
+    return decodeURIComponent(url).toLowerCase().includes('.pdf');
+  } catch {
+    return url.toLowerCase().includes('.pdf');
+  }
 }
 
 export type UploadFieldProps = {
@@ -139,23 +143,13 @@ export function UploadField({
       ) : null}
 
       {showPdfPreview ? (
-        <div className="relative mb-3 flex items-center gap-3 rounded-lg border border-gray-200 bg-gray-50 px-4 py-3">
-          <svg
-            className="h-10 w-10 shrink-0 text-red-600"
-            fill="currentColor"
-            viewBox="0 0 24 24"
-            aria-hidden
-          >
-            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6zm-1 2l5 5h-5V4zM8 12h8v2H8v-2zm0 4h8v2H8v-2z" />
-          </svg>
-          <span className="min-w-0 flex-1 truncate text-sm font-medium text-gray-800">
-            {filenameFromUrl(currentUrl!)}
-          </span>
+        <div className="relative mb-3">
+          <PDFPreview url={currentUrl!} label={filenameFromUrl(currentUrl!)} compact />
           {onRemove ? (
             <button
               type="button"
               onClick={onRemove}
-              className="shrink-0 rounded-md bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 transition hover:bg-gray-50"
+              className="absolute top-2 right-2 z-10 rounded-md bg-white/95 px-2 py-1 text-xs font-medium text-gray-700 shadow-sm ring-1 ring-gray-200 transition hover:bg-white"
             >
               {t('common.remove')}
             </button>

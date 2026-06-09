@@ -315,6 +315,8 @@ export const translations: TranslationMap = {
   'common.filtersActive': '{count} filtro(s) activo(s)',
   'common.clearFilters': 'Borrar todos los filtros',
   'common.noDocument': 'No hay ning\u00fan documento cargado',
+  'common.pdfPreviewLoading': 'Cargando vista previa del PDF…',
+  'common.pdfPreviewFailed': 'Vista previa no disponible. Abre el documento en una pesta\u00f1a nueva.',
   'common.noQr': 'No hay ning\u00fan c\u00f3digo QR cargado',
 
   // ── Policy descriptions (dynamic) ──
