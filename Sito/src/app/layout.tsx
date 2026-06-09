@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AppShell } from '@/components/layout/AppShell';
-import { ServiceWorkerCleanup } from '@/components/system/ServiceWorkerCleanup';
+import { PWAClient } from '@/components/pwa/PWAClient';
 import './globals.css';
 
 /** Bump when replacing brand assets so browsers skip stale caches. */
@@ -13,6 +13,11 @@ export const metadata: Metadata = {
   description:
     'Digital identification and document management for drone operators. Not an official aviation authority registry.',
   applicationName: 'DroneTag',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'DroneTag',
+  },
   icons: {
     icon: [
       {
@@ -50,10 +55,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
-        <ServiceWorkerCleanup />
         <AuthProvider>
           <LanguageProvider>
             <AppShell>{children}</AppShell>
+            <PWAClient />
           </LanguageProvider>
         </AuthProvider>
       </body>

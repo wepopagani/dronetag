@@ -114,10 +114,11 @@ export function PWAClient() {
   // Install success toast (3s).
   const [showInstallToast, setShowInstallToast] = useState<boolean>(false);
 
-  /* ── Service-worker registration (production only). ─────────────── */
+  /* ── Service-worker registration (production or explicit dev flag). ─ */
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    if (process.env.NODE_ENV !== 'production') return;
+    const enableInDev = process.env.NEXT_PUBLIC_PWA_DEV === 'true';
+    if (process.env.NODE_ENV !== 'production' && !enableInDev) return;
     if (!('serviceWorker' in navigator)) return;
     const onLoad = () => {
       navigator.serviceWorker
