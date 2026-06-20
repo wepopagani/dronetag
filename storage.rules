@@ -1,0 +1,79 @@
+rules_version = '2';
+
+// DroneTag — Firebase Storage rules (PR-SEC-1).
+//
+// Closes:
+//   V-011 — no storage.rules file existed.
+//   V-012 — uploads were not user-scoped; any authenticated user could
+//           overwrite any path. Fixed by requiring the URL prefix
+//           `users/{uid}/...` to match the authenticated uid.
+//   V-013 — SVG uploads were allowed and could host JS. Removed from
+//           the content-type allowlist.
+//   V-014 — no max-size enforcement on the wire. Capped at 20 MB.
+//
+// Notes:
+//   * `getDownloadURL()` returns a long-lived token URL; once issued,
+//     anyone with the URL can fetch the object. This is intentional —
+//     we want the public profile QR/NFC viewers to load images and
+//     PDFs without authentication. The rules below restrict who can
+//     WRITE, not who can subsequently read via a token.
+//   * Legacy `profiles/{path=**}` paths are admin-only writeable so
+//     existing legacy admin uploads keep working until migration
+//     finishes; everything else falls through the default deny.
+//   * App Check enforcement is tracked in PR-SEC-2.
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // ─── Helpers ─────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+    function isAllowedContentType() {
+      return request.resource.contentType.matches(
+        'application/pdf|image/png|image/jpeg|image/webp'
+      );
+    }
+    function isWithinSizeLimit() {
+      // 20 MB hard cap. The client also caps at 5 MB for images and
+      // 20 MB for PDFs — this is the server enforcement.
+      return request.resource.size < 20 * 1024 * 1024;
+    }
+
+    // ─── User-scoped namespace (the only writable area) ─────────────────
+    // Path: users/{uid}/...
+    match /users/{uid}/{allPaths=**} {
+      allow read: if true;  // download URL tokens are public anyway
+      allow write: if isSignedIn()
+                       && request.auth.uid == uid
+                       && isAllowedContentType()
+                       && isWithinSizeLimit();
+      allow write: if isAdmin()
+                       && isAllowedContentType()
+                       && isWithinSizeLimit();
+      allow delete: if isSignedIn() && request.auth.uid == uid;
+      allow delete: if isAdmin();
+    }
+
+    // ─── Legacy profiles namespace ──────────────────────────────────────
+    // Pre-PR-SEC-1 uploads still live at `profiles/{slug}/...`. We keep
+    // them publicly readable (they back the legacy `/u/[slug]` page that
+    // is being phased out) and let admins overwrite/delete during the
+    // migration window. New uploads go under `users/{uid}/...`.
+    match /profiles/{path=**} {
+      allow read: if true;
+      allow write: if isAdmin()
+                       && isAllowedContentType()
+                       && isWithinSizeLimit();
+      allow delete: if isAdmin();
+    }
+
+    // ─── Default deny for any other path ────────────────────────────────
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
