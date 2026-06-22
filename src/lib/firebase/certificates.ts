@@ -94,13 +94,19 @@ export async function createCertificate(
 }
 
 /** Upload certificate PDF via Admin SDK (avoids client Storage rules). */
-export async function uploadCertificatePdf(certificateId: string, file: File): Promise<string> {
+export async function uploadCertificatePdf(
+  certificateId: string,
+  file: File,
+  parserTrusted = false,
+): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
     return URL.createObjectURL(file);
   }
+  const before = await getCertificate(certificateId);
   const form = new FormData();
   form.append('file', file);
+  if (parserTrusted) form.append('parserTrusted', '1');
   const res = await adminFetch(`/api/entities/certificates/${certificateId}/pdf`, {
     method: 'POST',
     body: form,
@@ -110,6 +116,7 @@ export async function uploadCertificatePdf(certificateId: string, file: File): P
     throw new Error(body.error || `upload certificate pdf failed (${res.status})`);
   }
   if (!body.fileUrl) throw new Error('upload certificate pdf failed: missing fileUrl');
+  if (before?.userId) await requestPublicDroneResync(before.userId);
   return body.fileUrl;
 }
 

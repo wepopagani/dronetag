@@ -59,7 +59,7 @@ function setIdTokenCookie(token: string | null): void {
 async function postSessionCookie(token: string): Promise<void> {
   try {
     const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 8000);
+    const timer = setTimeout(() => controller.abort(), 3000);
     await fetch('/api/session', {
       method: 'POST',
       credentials: 'same-origin',
@@ -90,32 +90,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false;
 
-    async function applyClaims(u: User | null): Promise<void> {
+    async function applyClaims(u: User | null, forceRefresh = false): Promise<void> {
       if (!u) {
         setIsAdmin(false);
         setIdTokenCookie(null);
-        await clearSessionCookie();
+        void clearSessionCookie();
         return;
       }
-      // V-030: force-refresh the ID token so newly granted custom claims
-      // (e.g. `admin: true` set via scripts/grant-admin.ts) are picked up
-      // immediately. Without this, the user would have to sign out/in.
-      const token = await u.getIdToken(true);
-      const tokenResult = await u.getIdTokenResult();
+      // Fast path: read cached token first so redirects and admin gates unblock quickly.
+      // A background force-refresh picks up newly granted custom claims.
+      const token = await u.getIdToken(forceRefresh);
+      const tokenResult = await u.getIdTokenResult(forceRefresh);
       if (cancelled) return;
       setIsAdmin(tokenResult.claims.admin === true);
       setIdTokenCookie(token);
-      await postSessionCookie(token);
+      void postSessionCookie(token);
     }
+
+    let initialAuthEvent = true;
 
     const unsubscribe = onAuthChange((u) => {
       setUser(u);
-      // Don't block the UI on token refresh / session cookie — especially on
-      // mobile where `/api/session` can be slow over LAN dev servers.
       if (!cancelled) setLoading(false);
       void (async () => {
         try {
-          await applyClaims(u);
+          await applyClaims(u, false);
+          if (u && initialAuthEvent) {
+            initialAuthEvent = false;
+            void applyClaims(u, true).catch((err) => {
+              console.warn('[auth] background claims refresh failed', err);
+            });
+          }
         } catch (err) {
           console.warn('[auth] claims apply failed', err);
         }
@@ -125,7 +130,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Safety net: if Firebase auth never fires (blocked storage, offline), unblock UI.
     const loadingTimeout = setTimeout(() => {
       if (!cancelled) setLoading(false);
-    }, 6000);
+    }, 2500);
 
     // V-030: periodic refresh keeps `isAdmin` in sync with the latest
     // server-side claims and rotates the cookie before it expires.
@@ -133,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const fbAuth = (await import('@/lib/firebase/auth')).getCurrentUser?.();
       if (!fbAuth) return;
       try {
-        await applyClaims(fbAuth);
+        await applyClaims(fbAuth, true);
       } catch (err) {
         console.warn('[auth] periodic refresh failed', err);
       }

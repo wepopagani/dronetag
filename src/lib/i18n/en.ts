@@ -70,6 +70,9 @@ export const translations = {
 
   // ── Consumer auth ──
   'auth.consumerEyebrow': 'DIGITAL IDENTITY FOR UAS OPERATORS',
+  'auth.google': 'Continue with Google',
+  'auth.or': 'or',
+  'auth.googleError': 'Google sign-in failed. Please try again.',
 
   // ── Login form ──
   'login.email': 'Email address',

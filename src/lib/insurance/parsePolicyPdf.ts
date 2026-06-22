@@ -278,7 +278,9 @@ export function parsePolicyPdfText(text: string): ParsedPolicyFields {
     holderName, provider, policyNumber, issueDate, expiryDate,
     droneManufacturer, droneModel,
   ].filter(Boolean);
-  const hasAllKey = Boolean(provider && policyNumber && expiryDate);
+  const hasAllKey = Boolean(
+    holderName && provider && policyNumber && issueDate && expiryDate,
+  );
 
   return {
     holderName,

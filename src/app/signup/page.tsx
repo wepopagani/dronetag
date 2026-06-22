@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { useEffect, useLayoutEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -11,6 +11,8 @@ import { signupWithEmail } from '@/lib/firebase/auth';
 import { ensureAccount } from '@/lib/firebase/account';
 import { trackEvent } from '@/lib/analytics';
 import { AuthPageLayout } from '@/components/auth/AuthPageLayout';
+import { AuthOrDivider } from '@/components/auth/AuthOrDivider';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 
@@ -27,13 +29,18 @@ export default function SignupPage() {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (authLoading) return;
     if (!ALLOW_PUBLIC_SIGNUP && !DEMO_MODE) {
       router.replace('/login');
       return;
     }
     if (user) router.replace('/account');
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    if (authLoading || !user) return;
+    router.prefetch('/account');
   }, [user, authLoading, router]);
 
   async function handleSubmit(e: FormEvent) {
@@ -95,7 +102,11 @@ export default function SignupPage() {
         </p>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
+        <GoogleAuthButton disabled={submitting} onError={setError} />
+        <AuthOrDivider />
+      </div>
+      <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Input
             name="firstName"

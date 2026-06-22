@@ -61,6 +61,9 @@ export const translations: TranslationMap = {
 
   // ── Consumer auth ──
   'auth.consumerEyebrow': 'DIGITALE IDENTIT\u00c4T F\u00dcR UAS-BETREIBER',
+  'auth.google': 'Mit Google fortfahren',
+  'auth.or': 'oder',
+  'auth.googleError': 'Google-Anmeldung fehlgeschlagen. Bitte erneut versuchen.',
 
   // ── Login form ──
   'login.email': 'E-Mail-Adresse',

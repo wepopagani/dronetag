@@ -8,6 +8,10 @@ import { adminUploadPdf } from '@/lib/server/storage';
 import { requireUserFromRequest } from '@/lib/server/requestAuth';
 import { sanitizeAllowedUrl } from '@/lib/server/urls';
 import { storageErrorResponse } from '@/lib/server/storageErrors';
+import {
+  certificateFromFirestore,
+  resolveCertificateVerificationAfterPdfUpload,
+} from '@/lib/server/parserAutoVerify';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -46,6 +50,7 @@ export async function POST(request: Request, context: RouteContext) {
   if (!(raw instanceof Blob)) {
     return NextResponse.json({ error: 'file is required' }, { status: 400 });
   }
+  const parserTrustedByUser = form.get('parserTrusted') === '1';
   if (raw.type && raw.type !== 'application/pdf') {
     return NextResponse.json({ error: 'only application/pdf is allowed' }, { status: 400 });
   }
@@ -64,14 +69,27 @@ export async function POST(request: Request, context: RouteContext) {
     return storageErrorResponse(err, 'certificate pdf upload');
   }
 
+  let verificationStatus = certificateFromFirestore(id, snap.data() as Record<string, unknown>).verificationStatus;
+  try {
+    const certificate = certificateFromFirestore(id, snap.data() as Record<string, unknown>);
+    verificationStatus = await resolveCertificateVerificationAfterPdfUpload({
+      pdfBuffer: buffer,
+      certificate,
+      parserTrustedByUser,
+    });
+  } catch (err) {
+    console.warn('[certificate/pdf] parser auto-verify skipped', err);
+  }
+
   try {
     await db.collection('certificates').doc(id).update({
       fileUrl,
+      verificationStatus,
       updatedAt: new Date().toISOString(),
     });
   } catch (err) {
     return storageErrorResponse(err, 'certificate pdf firestore update');
   }
 
-  return NextResponse.json({ fileUrl });
+  return NextResponse.json({ fileUrl, verificationStatus });
 }

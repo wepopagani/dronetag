@@ -19,6 +19,7 @@ import {
   createInsurance,
   deleteInsurance,
   listInsurances,
+  updateInsurance,
   uploadInsurancePolicyPdf,
 } from '@/lib/firebase/insurances';
 import { listDronesByUser, updateDrone } from '@/lib/firebase/drones';
@@ -48,6 +49,8 @@ import { EntityListShell } from '@/components/account/EntityListShell';
 import { FormErrorBanner } from '@/components/account/FormErrorBanner';
 import { ReadOnlyField } from '@/components/account/ReadOnlyField';
 import { EntityPdfPreviewModal } from '@/components/account/EntityPdfPreviewModal';
+import type { ParsedPolicyFields } from '@/lib/insurance/parsePolicyPdf';
+import { insuranceFormMatchesParser } from '@/lib/parser/autoVerify';
 
 interface InsuranceFormState {
   link: InsuranceLink;
@@ -108,6 +111,7 @@ export default function AccountInsurancesPage() {
   const [pendingCreate, setPendingCreate] = useState<{
     form: InsuranceFormState;
     pendingPdf: File | null;
+    parserTrusted: boolean;
   } | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState<Insurance | null>(null);
   const [previewing, setPreviewing] = useState<Insurance | null>(null);
@@ -150,7 +154,11 @@ export default function AccountInsurancesPage() {
     );
   }
 
-  async function handleCreate(form: InsuranceFormState, pendingPdf: File | null) {
+  async function handleCreate(
+    form: InsuranceFormState,
+    pendingPdf: File | null,
+    parserTrusted: boolean,
+  ) {
     if (!user) return;
     setSavingId('new');
     setSaveError(null);
@@ -173,7 +181,9 @@ export default function AccountInsurancesPage() {
       });
 
       if (pendingPdf) {
-        await uploadInsurancePolicyPdf(insuranceId, pendingPdf);
+        await uploadInsurancePolicyPdf(insuranceId, pendingPdf, parserTrusted);
+      } else if (parserTrusted) {
+        await updateInsurance(insuranceId, { verificationStatus: 'verified' });
       }
 
       await reload();
@@ -249,8 +259,8 @@ export default function AccountInsurancesPage() {
           operators={operators}
           saving={savingId === 'new'}
           onClose={() => setCreating(false)}
-          onSubmit={(form, pendingPdf) => {
-            setPendingCreate({ form, pendingPdf });
+          onSubmit={(form, pendingPdf, parserTrusted) => {
+            setPendingCreate({ form, pendingPdf, parserTrusted });
             setConfirmingCreate(true);
           }}
         />
@@ -280,7 +290,11 @@ export default function AccountInsurancesPage() {
         loading={savingId === 'new'}
         onConfirm={() => {
           if (!pendingCreate) return;
-          void handleCreate(pendingCreate.form, pendingCreate.pendingPdf).finally(() => {
+          void handleCreate(
+            pendingCreate.form,
+            pendingCreate.pendingPdf,
+            pendingCreate.parserTrusted,
+          ).finally(() => {
             setConfirmingCreate(false);
             setPendingCreate(null);
           });
@@ -409,12 +423,13 @@ function InsuranceFormModal({
   operators: Operator[];
   saving: boolean;
   onClose: () => void;
-  onSubmit: (form: InsuranceFormState, pendingPdf: File | null) => void;
+  onSubmit: (form: InsuranceFormState, pendingPdf: File | null, parserTrusted: boolean) => void;
 }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<InsuranceFormState>(EMPTY_FORM);
   const [errors, setErrors] = useState<Record<string, string | undefined>>({});
   const [pendingPdf, setPendingPdf] = useState<File | null>(null);
+  const [parsedSnapshot, setParsedSnapshot] = useState<ParsedPolicyFields | null>(null);
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>(() => form.pdfUrl);
   const [parsing, setParsing] = useState(false);
   const [parseMessage, setParseMessage] = useState<string | null>(null);
@@ -446,11 +461,13 @@ function InsuranceFormModal({
     setPdfPreviewUrl(blobUrl);
     setParseMessage(null);
     setDetectedDrone(null);
+    setParsedSnapshot(null);
     setParsing(true);
 
     try {
       const text = await extractTextFromPdf(file);
       const parsed = parsePolicyPdfText(text);
+      setParsedSnapshot(parsed);
       const matchedDroneId = matchDroneFromPolicySpecs(
         drones,
         parsed.droneManufacturer,
@@ -499,6 +516,7 @@ function InsuranceFormModal({
     setPdfPreviewUrl('');
     setParseMessage(null);
     setDetectedDrone(null);
+    setParsedSnapshot(null);
   }
 
   function validate(): Record<string, string> {
@@ -516,7 +534,8 @@ function InsuranceFormModal({
     const v = validate();
     setErrors(v);
     if (Object.keys(v).length > 0) return;
-    onSubmit(form, pendingPdf);
+    const parserTrusted = insuranceFormMatchesParser(form, parsedSnapshot);
+    onSubmit(form, pendingPdf, parserTrusted);
   }
 
   const previewInsurance = formToInsurancePreview(form);

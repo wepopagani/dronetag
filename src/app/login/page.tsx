@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, type ChangeEvent, type FormEvent } from 'react';
+import { Suspense, useEffect, useLayoutEffect, useState, type ChangeEvent, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -10,6 +10,8 @@ import { ALLOW_PUBLIC_SIGNUP } from '@/lib/config/features';
 import { DEMO_MODE } from '@/lib/firebase/config';
 import { trackEvent } from '@/lib/analytics';
 import { AuthPageLayout } from '@/components/auth/AuthPageLayout';
+import { AuthOrDivider } from '@/components/auth/AuthOrDivider';
+import { GoogleAuthButton } from '@/components/auth/GoogleAuthButton';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { PasswordInput } from '@/components/ui/PasswordInput';
@@ -39,10 +41,14 @@ function LoginInner() {
     return isAdminUser ? '/admin' : '/account';
   }
 
+  useLayoutEffect(() => {
+    if (authLoading || !user) return;
+    router.replace(resolveDestination(isAdmin));
+  }, [user, authLoading, isAdmin, router, redirectParam]);
+
   useEffect(() => {
-    if (authLoading) return;
-    if (user) router.replace(resolveDestination(isAdmin));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    if (authLoading || !user) return;
+    router.prefetch(resolveDestination(isAdmin));
   }, [user, authLoading, isAdmin, router, redirectParam]);
 
   async function handleSubmit(e: FormEvent) {
@@ -87,7 +93,11 @@ function LoginInner() {
         )
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="space-y-4">
+        <GoogleAuthButton disabled={submitting} onError={setError} />
+        <AuthOrDivider />
+      </div>
+      <form onSubmit={handleSubmit} className="mt-4 space-y-4">
         <Input
           name="email"
           type="email"

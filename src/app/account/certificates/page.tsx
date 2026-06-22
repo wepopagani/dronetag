@@ -16,10 +16,13 @@ import {
   createCertificate,
   deleteCertificate,
   listCertificates,
+  updateCertificate,
   uploadCertificatePdf,
 } from '@/lib/firebase/certificates';
-import { ensureSlots } from '@/lib/firebase/slots';
 import { extractCertificateFields } from '@/lib/certificate/extractCertificateFields';
+import type { ParsedCertificateFields } from '@/lib/certificate/parseCertificatePdf';
+import { certificateFormMatchesParser } from '@/lib/parser/autoVerify';
+import { ensureSlots } from '@/lib/firebase/slots';
 import {
   CERTIFICATE_KINDS,
   type Certificate,
@@ -78,6 +81,7 @@ export default function AccountCertificatesPage() {
   const [pendingCreate, setPendingCreate] = useState<{
     form: CertFormState;
     pendingPdf: File | null;
+    parserTrusted: boolean;
   } | null>(null);
   const [confirmingDelete, setConfirmingDelete] = useState<Certificate | null>(null);
   const [previewing, setPreviewing] = useState<Certificate | null>(null);
@@ -115,7 +119,11 @@ export default function AccountCertificatesPage() {
   const cap = slots?.certificate ?? 1;
   const atCap = certificates.length >= cap;
 
-  async function handleCreate(form: CertFormState, pendingPdf: File | null) {
+  async function handleCreate(
+    form: CertFormState,
+    pendingPdf: File | null,
+    parserTrusted: boolean,
+  ) {
     if (!user) return;
     setSavingId('new');
     setSaveError(null);
@@ -134,7 +142,9 @@ export default function AccountCertificatesPage() {
       });
 
       if (pendingPdf) {
-        await uploadCertificatePdf(certificateId, pendingPdf);
+        await uploadCertificatePdf(certificateId, pendingPdf, parserTrusted);
+      } else if (parserTrusted) {
+        await updateCertificate(certificateId, { verificationStatus: 'verified' });
       }
 
       await reload();
@@ -244,8 +254,8 @@ export default function AccountCertificatesPage() {
           isOpen
           saving={savingId === 'new'}
           onClose={() => setCreating(false)}
-          onSubmit={(form, pendingPdf) => {
-            setPendingCreate({ form, pendingPdf });
+          onSubmit={(form, pendingPdf, parserTrusted) => {
+            setPendingCreate({ form, pendingPdf, parserTrusted });
             setConfirmingCreate(true);
           }}
         />
@@ -268,7 +278,11 @@ export default function AccountCertificatesPage() {
         loading={savingId === 'new'}
         onConfirm={() => {
           if (!pendingCreate) return;
-          void handleCreate(pendingCreate.form, pendingCreate.pendingPdf).finally(() => {
+          void handleCreate(
+            pendingCreate.form,
+            pendingCreate.pendingPdf,
+            pendingCreate.parserTrusted,
+          ).finally(() => {
             setConfirmingCreate(false);
             setPendingCreate(null);
           });
@@ -316,7 +330,7 @@ function CertFormModal({
   isOpen: boolean;
   saving: boolean;
   onClose: () => void;
-  onSubmit: (form: CertFormState, pendingPdf: File | null) => void;
+  onSubmit: (form: CertFormState, pendingPdf: File | null, parserTrusted: boolean) => void;
 }) {
   const { t } = useLanguage();
   const [form, setForm] = useState<CertFormState>(EMPTY_FORM);
@@ -325,6 +339,7 @@ function CertFormModal({
   const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string>(() => form.fileUrl);
   const [parsing, setParsing] = useState(false);
   const [parseMessage, setParseMessage] = useState<string | null>(null);
+  const [parsedSnapshot, setParsedSnapshot] = useState<ParsedCertificateFields | null>(null);
   const [parsedHolder, setParsedHolder] = useState<string | null>(null);
   const blobUrlRef = useRef<string | null>(null);
 
@@ -348,10 +363,12 @@ function CertFormModal({
     setPdfPreviewUrl(blobUrl);
     setParseMessage(null);
     setParsedHolder(null);
+    setParsedSnapshot(null);
     setParsing(true);
 
     try {
       const parsed = await extractCertificateFields(file);
+      setParsedSnapshot(parsed);
 
       if (parsed.holderName) setParsedHolder(parsed.holderName);
 
@@ -389,6 +406,7 @@ function CertFormModal({
     setPdfPreviewUrl('');
     setParseMessage(null);
     setParsedHolder(null);
+    setParsedSnapshot(null);
   }
 
   function validate(): Record<string, string> {
@@ -404,7 +422,8 @@ function CertFormModal({
     const v = validate();
     setErrors(v);
     if (Object.keys(v).length > 0) return;
-    onSubmit(form, pendingPdf);
+    const parserTrusted = certificateFormMatchesParser(form, parsedSnapshot);
+    onSubmit(form, pendingPdf, parserTrusted);
   }
 
   const status = computeCertificateStatus(form);

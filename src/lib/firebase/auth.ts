@@ -1,7 +1,10 @@
 import {
   createUserWithEmailAndPassword,
+  getAdditionalUserInfo,
+  GoogleAuthProvider,
   onAuthStateChanged,
   signInWithEmailAndPassword,
+  signInWithPopup,
   signOut,
   updateProfile,
   type Unsubscribe,
@@ -20,6 +23,22 @@ const DEMO_USER = {
 } as User;
 
 // ─── Auth API ────────────────────────────────────────────────────────────────
+
+export type GoogleSignInResult = UserCredential & {
+  isNewUser: boolean;
+};
+
+export function loginWithGoogle(): Promise<GoogleSignInResult> {
+  if (DEMO_MODE) {
+    return Promise.resolve({ user: DEMO_USER, isNewUser: false } as GoogleSignInResult);
+  }
+  const provider = new GoogleAuthProvider();
+  provider.setCustomParameters({ prompt: 'select_account' });
+  return signInWithPopup(getFirebaseAuth(), provider).then((credential) => {
+    const info = getAdditionalUserInfo(credential);
+    return { ...credential, isNewUser: info?.isNewUser ?? false };
+  });
+}
 
 export function loginWithEmail(
   email: string,

@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { AuthProvider } from '@/contexts/AuthContext';
 import { LanguageProvider } from '@/contexts/LanguageContext';
 import { AppShell } from '@/components/layout/AppShell';
+import { AuthRoutePrefetch } from '@/components/auth/AuthRoutePrefetch';
 import { ServiceWorkerCleanup } from '@/components/system/ServiceWorkerCleanup';
 import './globals.css';
 
@@ -53,6 +54,7 @@ export default function RootLayout({
         <ServiceWorkerCleanup />
         <AuthProvider>
           <LanguageProvider>
+            <AuthRoutePrefetch />
             <AppShell>{children}</AppShell>
           </LanguageProvider>
         </AuthProvider>

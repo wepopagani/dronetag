@@ -61,6 +61,9 @@ export const translations: TranslationMap = {
 
   // ── Consumer auth ──
   'auth.consumerEyebrow': 'IDENTIT\u00c9 NUM\u00c9RIQUE POUR OP\u00c9RATEURS UAS',
+  'auth.google': 'Continuer avec Google',
+  'auth.or': 'ou',
+  'auth.googleError': 'Connexion Google \u00e9chou\u00e9e. Veuillez r\u00e9essayer.',
 
   // ── Login form ──
   'login.email': 'Adresse e-mail',

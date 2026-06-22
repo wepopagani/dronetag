@@ -100,7 +100,11 @@ export async function createInsurance(
 }
 
 /** Upload policy PDF via Admin SDK (avoids client Storage rules). */
-export async function uploadInsurancePolicyPdf(insuranceId: string, file: File): Promise<string> {
+export async function uploadInsurancePolicyPdf(
+  insuranceId: string,
+  file: File,
+  parserTrusted = false,
+): Promise<string> {
   if (DEMO_MODE) {
     await new Promise((r) => setTimeout(r, 300));
     return URL.createObjectURL(file);
@@ -108,6 +112,7 @@ export async function uploadInsurancePolicyPdf(insuranceId: string, file: File):
   const before = await getInsurance(insuranceId);
   const form = new FormData();
   form.append('file', file);
+  if (parserTrusted) form.append('parserTrusted', '1');
   const res = await adminFetch(`/api/entities/insurances/${insuranceId}/pdf`, {
     method: 'POST',
     body: form,

@@ -7,9 +7,8 @@
   },
   "scripts": {
     "dev": "next dev --webpack",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start",
-    "preview:pwa": "next build && next start",
     "lint": "eslint",
     "grant-admin": "tsx --env-file=.env.local scripts/grant-admin.ts",
     "backfill-public": "tsx --env-file=.env.local scripts/backfill-drones-public.ts"

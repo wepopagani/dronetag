@@ -1,5 +1,5 @@
 /**
- * Client-side PDF text extraction via pdf.js (dynamic import).
+ * PDF text extraction via pdf.js (browser + Node).
  * Sorts text items by position so multi-column ENAC/EASA certificates
  * read in a sensible order.
  */
@@ -50,14 +50,19 @@ function pageItemsToText(items: unknown[]): string {
   return lines.join('\n');
 }
 
-export async function extractTextFromPdf(file: File): Promise<string> {
-  const pdfjs = await import('pdfjs-dist');
+async function loadPdfDocument(data: Uint8Array) {
   if (typeof window !== 'undefined') {
+    const pdfjs = await import('pdfjs-dist');
     pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
+    return pdfjs.getDocument({ data }).promise;
   }
 
-  const buffer = await file.arrayBuffer();
-  const doc = await pdfjs.getDocument({ data: buffer }).promise;
+  const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs');
+  return pdfjs.getDocument({ data, useSystemFonts: true }).promise;
+}
+
+export async function extractTextFromPdfBuffer(data: Uint8Array): Promise<string> {
+  const doc = await loadPdfDocument(data);
   const parts: string[] = [];
 
   for (let page = 1; page <= doc.numPages; page += 1) {
@@ -67,4 +72,9 @@ export async function extractTextFromPdf(file: File): Promise<string> {
   }
 
   return parts.join('\n');
+}
+
+export async function extractTextFromPdf(file: File): Promise<string> {
+  const buffer = new Uint8Array(await file.arrayBuffer());
+  return extractTextFromPdfBuffer(buffer);
 }
