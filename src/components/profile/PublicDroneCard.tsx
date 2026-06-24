@@ -147,7 +147,7 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
 
   return (
     <div className="overflow-hidden rounded-none border-y border-gray-200 bg-white shadow-none sm:rounded-xl sm:border sm:shadow-lg">
-      {/* ── Banner + identity (avatar overlaps banner on mobile) ──────── */}
+      {/* ── Banner + identity ─────────────────────────────────────────── */}
       <div className="relative">
         <div className="relative h-32 w-full overflow-hidden sm:h-36">
           {hasUrl(snapshot.bannerUrl) ? (
@@ -176,8 +176,8 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
           ) : null}
         </div>
 
-        <div className="border-b border-gray-100 bg-white px-4 pb-4 pt-0 sm:px-6 sm:pb-5">
-          <div className="-mt-12 flex flex-col gap-3 sm:-mt-14 sm:flex-row sm:items-end sm:gap-4">
+        <div className="border-b border-gray-100 bg-white px-4 py-4 sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
             {hasUrl(snapshot.profilePhotoUrl) ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -217,6 +217,10 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
 
       {/* ── Status row ─ outdoors-readable badges ─────────────────────── */}
       <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:flex-wrap sm:items-center sm:px-6">
+        <span className="inline-flex w-full items-center gap-2 rounded-full bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20 sm:w-auto sm:py-1.5 sm:text-sm">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-emerald-500" aria-hidden />
+          {t('publicDrone.userVerified')}
+        </span>
         <span
           className={classNames(
             'inline-flex w-full items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold ring-1 ring-inset sm:w-auto sm:py-1.5 sm:text-sm',
@@ -238,34 +242,6 @@ export function PublicDroneCard({ snapshot, language }: PublicDroneCardProps) {
           <span className={classNames('h-2.5 w-2.5 shrink-0 rounded-full', policy.dot)} aria-hidden />
           {t(insuranceBannerKey(snapshot.insuranceStatus as PolicyStatus))}
         </span>
-      </div>
-
-      {/* ── Insurance banner ───────────────────────────────────────────── */}
-      <div className="px-4 sm:px-6">
-        <div
-          className={classNames(
-            'flex items-start gap-3 rounded-lg border p-3.5 text-sm leading-snug',
-            snapshot.insuranceStatus === 'valid' && 'border-emerald-200 bg-emerald-50 text-emerald-800',
-            snapshot.insuranceStatus === 'expiring' && 'border-amber-200 bg-amber-50 text-amber-800',
-            snapshot.insuranceStatus === 'expired' && 'border-red-200 bg-red-50 text-red-800',
-            snapshot.insuranceStatus === 'missing' && 'border-gray-200 bg-gray-50 text-gray-700',
-          )}
-          role={snapshot.insuranceStatus === 'expired' ? 'alert' : 'status'}
-        >
-          <span className="mt-0.5">
-            {snapshot.insuranceStatus === 'valid' ? <IconCheck /> : <IconExclamation />}
-          </span>
-          <div className="space-y-1">
-            <p className="font-semibold">
-              {t(insuranceBannerKey(snapshot.insuranceStatus as PolicyStatus))}
-            </p>
-            {snapshot.insuranceValidUntil ? (
-              <p className="text-xs opacity-80">
-                {t('publicDrone.validUntil')}: {formatDate(snapshot.insuranceValidUntil)}
-              </p>
-            ) : null}
-          </div>
-        </div>
       </div>
 
       {/* ── Sections ──────────────────────────────────────────────────── */}
@@ -452,30 +428,6 @@ function IconClipboard() {
     <svg viewBox="0 0 20 20" fill="currentColor" className="h-[14px] w-[14px]" aria-hidden>
       <path d="M15.988 3.012A2.25 2.25 0 0118 5.25v6.5A2.25 2.25 0 0115.75 14H13.5V7A2.5 2.5 0 0011 4.5H8.128a2.252 2.252 0 011.884-1.488A2.25 2.25 0 0112.25 1h1.5a2.25 2.25 0 012.238 2.012zM11.5 3.25a.75.75 0 01.75-.75h1.5a.75.75 0 010 1.5h-1.5a.75.75 0 01-.75-.75z" />
       <path d="M2 7a1 1 0 011-1h8a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V7z" />
-    </svg>
-  );
-}
-
-function IconCheck() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden>
-      <path
-        fillRule="evenodd"
-        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-function IconExclamation() {
-  return (
-    <svg viewBox="0 0 20 20" fill="currentColor" className="h-5 w-5" aria-hidden>
-      <path
-        fillRule="evenodd"
-        d="M8.485 2.495c.673-1.167 2.357-1.167 3.03 0l6.28 10.875c.673 1.167-.17 2.625-1.516 2.625H3.72c-1.347 0-2.189-1.458-1.515-2.625L8.485 2.495zM10 5a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 0110 5zm0 9a1 1 0 100-2 1 1 0 000 2z"
-        clipRule="evenodd"
-      />
     </svg>
   );
 }

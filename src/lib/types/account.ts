@@ -32,6 +32,9 @@ export const EMPTY_ACCOUNT_BRANDING: AccountBranding = {
   bannerUrl: '',
 };
 
+import type { ContactVerificationState } from '@/lib/types/contactVerification';
+import { EMPTY_CONTACT_VERIFICATION } from '@/lib/types/contactVerification';
+
 export interface UserAccount {
   uid: string;
   email: string;
@@ -59,6 +62,9 @@ export interface UserAccount {
   profilePhotoUrl: string;
   logoUrl: string;
   bannerUrl: string;
+
+  /** OTP contact verification chosen at signup (email and/or phone). */
+  contactVerification: ContactVerificationState;
 
   createdAt: string;
   updatedAt: string;

@@ -30,6 +30,11 @@ export const DEMO_USER_ACCOUNT: UserAccount = {
   profilePhotoUrl: '',
   logoUrl: '',
   bannerUrl: '',
+  contactVerification: {
+    channels: ['email', 'phone'],
+    emailVerifiedAt: ago(120),
+    phoneVerifiedAt: ago(120),
+  },
   createdAt: ago(120),
   updatedAt: ago(5),
 };

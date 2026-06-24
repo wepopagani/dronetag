@@ -329,6 +329,11 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
+    // ─── Signup OTP challenges (server-only via Admin SDK) ───────────────
+    match /signupOtp/{uid} {
+      allow read, write: if false;
+    }
+
     // ─── Default deny for unmatched paths (V-009) ────────────────────────
     match /{document=**} {
       allow read, write: if false;

@@ -10,6 +10,7 @@ import { NextResponse } from 'next/server';
 import { requireAdminFromRequest } from '@/lib/server/adminAuth';
 import { adminFirestore } from '@/lib/server/firebaseAdmin';
 import type { UserAccount } from '@/lib/types/account';
+import type { ContactVerificationState } from '@/lib/types/contactVerification';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -21,6 +22,16 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
   const rawType = str('accountType');
   const accountType: UserAccount['accountType'] =
     rawType === 'company' ? 'company' : 'private';
+
+  const rawCv = (raw.contactVerification ?? {}) as Record<string, unknown>;
+  const channels = Array.isArray(rawCv.channels)
+    ? rawCv.channels.filter((c): c is 'email' | 'phone' => c === 'email' || c === 'phone')
+    : [];
+  const contactVerification: ContactVerificationState = {
+    channels,
+    emailVerifiedAt: typeof rawCv.emailVerifiedAt === 'string' ? rawCv.emailVerifiedAt : '',
+    phoneVerifiedAt: typeof rawCv.phoneVerifiedAt === 'string' ? rawCv.phoneVerifiedAt : '',
+  };
 
   return {
     uid,
@@ -44,6 +55,7 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
     profilePhotoUrl: str('profilePhotoUrl'),
     logoUrl: str('logoUrl'),
     bannerUrl: str('bannerUrl'),
+    contactVerification,
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
   };

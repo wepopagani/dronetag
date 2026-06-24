@@ -12,6 +12,10 @@ import { adminFetch } from '@/lib/client/adminApi';
 import { DEMO_MODE, getFirebaseDb } from '@/lib/firebase/config';
 import * as demoStore from '@/lib/demo/accountStore';
 import type { AccountType, UserAccount } from '@/lib/types/account';
+import {
+  EMPTY_CONTACT_VERIFICATION,
+  type ContactVerificationState,
+} from '@/lib/types/contactVerification';
 
 const USERS = 'users';
 
@@ -22,6 +26,16 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
 
   const rawType = str('accountType');
   const accountType: AccountType = rawType === 'company' ? 'company' : 'private';
+
+  const rawCv = (raw.contactVerification ?? {}) as Record<string, unknown>;
+  const channels = Array.isArray(rawCv.channels)
+    ? rawCv.channels.filter((c): c is 'email' | 'phone' => c === 'email' || c === 'phone')
+    : [];
+  const contactVerification: ContactVerificationState = {
+    channels,
+    emailVerifiedAt: typeof rawCv.emailVerifiedAt === 'string' ? rawCv.emailVerifiedAt : '',
+    phoneVerifiedAt: typeof rawCv.phoneVerifiedAt === 'string' ? rawCv.phoneVerifiedAt : '',
+  };
 
   return {
     uid,
@@ -45,6 +59,7 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
     profilePhotoUrl: str('profilePhotoUrl'),
     logoUrl: str('logoUrl'),
     bannerUrl: str('bannerUrl'),
+    contactVerification,
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
   };
@@ -96,6 +111,7 @@ export async function ensureAccount(
     profilePhotoUrl: seed.profilePhotoUrl ?? '',
     logoUrl: seed.logoUrl ?? '',
     bannerUrl: seed.bannerUrl ?? '',
+    contactVerification: seed.contactVerification ?? { ...EMPTY_CONTACT_VERIFICATION },
     createdAt: now,
     updatedAt: now,
   };

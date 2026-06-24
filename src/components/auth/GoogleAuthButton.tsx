@@ -5,6 +5,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { loginWithGoogle } from '@/lib/firebase/auth';
 import { ensureAccount } from '@/lib/firebase/account';
 import { trackEvent } from '@/lib/analytics';
+import { adminFetch } from '@/lib/client/adminApi';
 import { Button } from '@/components/ui/Button';
 
 function GoogleIcon() {
@@ -44,9 +45,10 @@ function splitDisplayName(displayName: string | null | undefined): { firstName: 
 type GoogleAuthButtonProps = {
   disabled?: boolean;
   onError?: (message: string) => void;
+  onSignedUp?: () => void;
 };
 
-export function GoogleAuthButton({ disabled = false, onError }: GoogleAuthButtonProps) {
+export function GoogleAuthButton({ disabled = false, onError, onSignedUp }: GoogleAuthButtonProps) {
   const { t } = useLanguage();
   const [loading, setLoading] = useState(false);
 
@@ -58,6 +60,13 @@ export function GoogleAuthButton({ disabled = false, onError }: GoogleAuthButton
       if (u) {
         const { firstName, lastName } = splitDisplayName(u.displayName);
         await ensureAccount(u.uid, u.email ?? '', { firstName, lastName });
+        if (result.isNewUser) {
+          await adminFetch('/api/auth/contact-verification/init', {
+            method: 'POST',
+            body: JSON.stringify({ channels: ['email'] }),
+          });
+          onSignedUp?.();
+        }
       }
       trackEvent(result.isNewUser ? 'signup' : 'login');
     } catch (err) {

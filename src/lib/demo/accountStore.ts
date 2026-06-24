@@ -4,6 +4,7 @@
  */
 
 import type { Order, UserAccount } from '@/lib/types/account';
+import { EMPTY_CONTACT_VERIFICATION } from '@/lib/types/contactVerification';
 import { DEMO_ORDERS, DEMO_USER_ACCOUNT } from './accountData';
 
 let accounts: UserAccount[] = [DEMO_USER_ACCOUNT];
@@ -49,6 +50,7 @@ export async function ensureAccount(
     profilePhotoUrl: seed.profilePhotoUrl ?? '',
     logoUrl: seed.logoUrl ?? '',
     bannerUrl: seed.bannerUrl ?? '',
+    contactVerification: seed.contactVerification ?? { ...EMPTY_CONTACT_VERIFICATION },
     createdAt: now,
     updatedAt: now,
   };

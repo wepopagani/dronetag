@@ -60,6 +60,11 @@ function accountFromRaw(uid: string, raw: Record<string, unknown>): UserAccount 
     profilePhotoUrl: str('profilePhotoUrl'),
     logoUrl: str('logoUrl'),
     bannerUrl: str('bannerUrl'),
+    contactVerification: {
+      channels: [],
+      emailVerifiedAt: '',
+      phoneVerifiedAt: '',
+    },
     createdAt: str('createdAt'),
     updatedAt: str('updatedAt'),
   };
